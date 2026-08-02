@@ -1,0 +1,255 @@
+CODE|FICHIER|CONTEXTE|TEXTE_ORIGINAL|TEXTE_RÉVISÉ
+APP_001|App.jsx|label étape barre de progression|Photos|
+APP_002|App.jsx|description étape barre de progression|Prends tes photos et ajoute le contexte — source, prix d'achat, détails que l'objectif ne voit pas.|
+APP_003|App.jsx|label étape barre de progression|Annonce|
+APP_004|App.jsx|description étape barre de progression|Revois le titre et la description générés. Affine avec le chat si besoin.|
+APP_005|App.jsx|label étape barre de progression|Publier|
+APP_006|App.jsx|description étape barre de progression|Copie-colle sur Vinted ou LBC, fixe ton prix, puis sauvegarde dans l'inventaire.|
+APP_008|App.jsx|label onglet nav|Générer|
+APP_009|App.jsx|titre page|Générer une annonce|
+APP_010|App.jsx|sous-titre page|Génère tes annonces plus vite que ton ombre, copie-colle sur les plateformes — fini la flemme de mettre en vente.|
+APP_011|App.jsx|label onglet nav|Inventaire|
+APP_012|App.jsx|titre page|Mon inventaire|
+APP_013|App.jsx|sous-titre page|Tout ton stock au même endroit, prêt à vendre en un coup d'œil.|
+APP_014|App.jsx|hint InfoBubble inventaire|Chaque article est lié à une source (Vide-grenier, Emmaüs…) — filtre par Source pour voir d'où viennent tes meilleures trouvailles, et par Tags pour le type d'objet. C'est ce suivi qui alimente les Stats.|
+APP_015|App.jsx|label onglet nav|Stats|
+APP_016|App.jsx|titre page|Statistiques|
+APP_017|App.jsx|sous-titre page|Vois enfin ce qui te rapporte vraiment, source par source.|
+APP_018|App.jsx|label onglet nav|Paramètres|
+APP_019|App.jsx|titre page|Paramètres|
+APP_020|App.jsx|sous-titre page|Personnalise Loot à ta façon de chiner, gère tes sources et tes tags pour un suivi optimisé.|
+APP_022|App.jsx|texte chargement splash|Chargement…|
+APP_023|App.jsx|bouton retour header|← Accueil|
+GEN_001|GenerateurTab.jsx|bouton galerie photos|🖼️ Galerie|
+GEN_002|GenerateurTab.jsx|bouton caméra photos|📷 Caméra|
+GEN_003|GenerateurTab.jsx|texte zone dépôt photos (mono)|Jusqu'à 5 photos par article|
+GEN_004|GenerateurTab.jsx|label champ infos complémentaires|Infos complémentaires (optionnel)|
+GEN_005|GenerateurTab.jsx|placeholder textarea infos|Marque, taille, année, défauts… tout ce que la photo ne montre pas ✨|
+GEN_006|GenerateurTab.jsx|label champ prix achat|Prix d'achat €|
+GEN_007|GenerateurTab.jsx|placeholder input prix achat|ex: 2|
+GEN_008|GenerateurTab.jsx|label champ source|Source|
+GEN_010|GenerateurTab.jsx|bouton générer annonce|✨ Générer l'annonce|
+GEN_011|GenerateurTab.jsx|bouton effacer photos|Effacer|
+GEN_012|GenerateurTab.jsx|bouton publier (étape review)|🚀 Publier|
+GEN_013|GenerateurTab.jsx|bouton recommencer (étape review)|← Recommencer|
+GEN_014|GenerateurTab.jsx|label section copier-coller|Copier-coller sur Vinted / LBC|
+GEN_015|GenerateurTab.jsx|label bouton InfoBubble publish|Pourquoi pas lié ?|
+GEN_016|GenerateurTab.jsx|contenu InfoBubble publish|On adorerait publier directement à ta place — vraiment. Mais Vinted interdit toute appli tierce et bannirait ton compte sans préavis. Pas question de prendre ce risque pour toi. Le jour où ils ouvrent une vraie API, on sort le champagne 🍾|
+GEN_021|GenerateurTab.jsx|label section prix publish|Prix|
+GEN_022|GenerateurTab.jsx|label reco IA prix|RECO IA|
+GEN_023|GenerateurTab.jsx|label prix listé par l'utilisateur|TON PRIX LISTÉ|
+GEN_024|GenerateurTab.jsx|placeholder input prix listé|€|
+GEN_025|GenerateurTab.jsx|placeholder input note prix|Note prix (Vinted suggère X€, marché saturé…)|
+GEN_026|GenerateurTab.jsx|bouton sauvegarder inventaire|💾 Sauvegarder dans l'inventaire|
+GEN_027|GenerateurTab.jsx|bouton passer (sans sauvegarder)|Passer|
+GEN_028|GenerateurTab.jsx|bouton retour annonce|← Retour à l'annonce|
+GEN_029|GenerateurTab.jsx|toast article ajouté|✓ Article ajouté à l'inventaire|
+GEN_030|GenerateurTab.jsx|message erreur génération|Erreur de génération. Réessaie.|
+GEN_031|GenerateurTab.jsx|message erreur sauvegarde|Erreur de sauvegarde. Réessaie.|
+GEN_032|GenerateurTab.jsx|label statut en attente (batch)|En attente|
+GEN_033|GenerateurTab.jsx|label statut génération (batch)|⏳ Génération…|
+GEN_034|GenerateurTab.jsx|label statut prêt (batch)|✓ Prêt|
+GEN_035|GenerateurTab.jsx|label statut erreur (batch)|✗ Erreur|
+GEN_036|GenerateurTab.jsx|label statut sauvé (batch)|💾 Sauvé|
+GEN_037|GenerateurTab.jsx|label champ source (batch)|Source|
+GEN_038|GenerateurTab.jsx|label champ date (batch)|Date|
+GEN_039|GenerateurTab.jsx|label champ prix par article (batch)|Prix / article €|
+GEN_040|GenerateurTab.jsx|label champ total lot (batch)|Total du lot €|
+GEN_042|GenerateurTab.jsx|bouton galerie photos (batch)|🖼️ Galerie|
+GEN_043|GenerateurTab.jsx|bouton caméra photos (batch)|📷 Caméra|
+GEN_044|GenerateurTab.jsx|texte zone dépôt photos (batch)|Tu peux mettre plusieurs photos du même article — je les identifie et tu pourras corriger.|
+GEN_045|GenerateurTab.jsx|label infos complémentaires (batch)|Infos complémentaires (optionnel)|
+GEN_046|GenerateurTab.jsx|placeholder textarea infos (batch)|Marque, taille, année, défauts… tout ce que la photo ne montre pas ✨|
+GEN_048|GenerateurTab.jsx|bouton grouper sélection (batch)|🔗 Grouper la sélection|
+GEN_049|GenerateurTab.jsx|tip grouper photos (batch)|💡 Coche les photos d'un même article puis clique sur "Grouper" pour n'en faire qu'une seule fiche.|
+GEN_050|GenerateurTab.jsx|title sortir photo du groupe|Sortir cette photo du groupe|
+GEN_053|GenerateurTab.jsx|bouton tout générer (chargement)|En cours…|
+GEN_054|GenerateurTab.jsx|bouton tout générer (batch)|✨ Tout générer|
+GEN_055|GenerateurTab.jsx|bouton vider (batch)|Vider|
+GEN_056|GenerateurTab.jsx|titre article par défaut (batch)|Article|
+GEN_057|GenerateurTab.jsx|placeholder infos supplémentaires article (batch)|Infos supplémentaires…|
+GEN_058|GenerateurTab.jsx|bouton réessayer (batch erreur)|🔄 Réessayer|
+GEN_060|GenerateurTab.jsx|placeholder input prix listé (batch)|Prix listé|
+GEN_061|GenerateurTab.jsx|placeholder input note prix (batch)|Note prix…|
+GEN_062|GenerateurTab.jsx|bouton sauver article (batch)|💾 Sauver|
+GEN_063|GenerateurTab.jsx|toast article ajouté (batch)|✓ Article ajouté à l'inventaire|
+GEN_064|GenerateurTab.jsx|toast échec sauvegarde (batch)|✗ Échec de la sauvegarde|
+GEN_065|GenerateurTab.jsx|empty state batch|Upload ta prochaine fournée pour tout générer d'un coup.|
+GEN_066|GenerateurTab.jsx|bouton mode un article|Un article|
+GEN_067|GenerateurTab.jsx|bouton mode multi-ajout|Multi-ajout|
+GEN_068|GenerateurTab.jsx|contenu InfoBubble modes (Un article)|Un article : tu photographies et génères une annonce à la fois, idéal quand tu veux la peaufiner tout de suite.|
+GEN_069|GenerateurTab.jsx|contenu InfoBubble modes (Multi-ajout)|Multi-ajout : tu veux gérer ta fournée d'achats (vide-grenier, Emmaüs…) et gagner du temps — prends plusieurs photos d'un coup, l'app regroupe automatiquement les photos d'un même objet et l'IA génère toutes les annonces en une fois.|
+INV_001|InventaireTab.jsx|label statut vendu|Vendu|
+INV_002|InventaireTab.jsx|label statut en vente|En vente|
+INV_003|InventaireTab.jsx|label statut en attente|En attente|
+INV_004|InventaireTab.jsx|placeholder barre de recherche|🔍 Rechercher un article ou une source…|
+INV_005|InventaireTab.jsx|option filtre malles (toutes)|🧳 Toutes|
+INV_006|InventaireTab.jsx|option filtre malles (mes articles)|Mes articles|
+INV_007|InventaireTab.jsx|pill filtre tous|Tous|
+INV_008|InventaireTab.jsx|pill filtre en attente|En attente|
+INV_009|InventaireTab.jsx|pill filtre en vente|En vente|
+INV_010|InventaireTab.jsx|pill filtre vendus|Vendus|
+INV_011|InventaireTab.jsx|pill filtre à reverser|À reverser|
+INV_013|InventaireTab.jsx|bouton filtre source|Source|
+INV_015|InventaireTab.jsx|bouton filtre tags|Tags|
+INV_016|InventaireTab.jsx|empty state aucun article|Aucun article.|
+INV_017|InventaireTab.jsx|bouton CTA empty state|✨ Générer ta première annonce|
+INV_026|InventaireTab.jsx|bouton marquer payé|Marquer payé|
+INV_027|InventaireTab.jsx|toast marqué vendu|✓ Marqué vendu|
+INV_028|InventaireTab.jsx|toast marqué en vente|✓ Marqué en vente|
+INV_033|InventaireTab.jsx|prompt prix de vente réel|Prix de vente réel (€) ?|
+INV_034|InventaireTab.jsx|confirm suppression article|Supprimer ?|
+STA_003|StatsTab.jsx|option filtre sources|Toutes sources|
+STA_005|StatsTab.jsx|bouton filtre tags|Tags|
+STA_006|StatsTab.jsx|label stat Articles|Articles|
+STA_007|StatsTab.jsx|label stat Dépense nette|Dépense nette|
+STA_008|StatsTab.jsx|label stat Vendus|Vendus|
+STA_009|StatsTab.jsx|label stat Taux de vente|Taux de vente|
+STA_010|StatsTab.jsx|label stat Marge nette|Marge nette|
+STA_011|StatsTab.jsx|label stat CA total|CA total|
+STA_012|StatsTab.jsx|label stat Panier moyen|Panier moyen|
+STA_013|StatsTab.jsx|label stat ROI|ROI|
+STA_014|StatsTab.jsx|titre section répartition par source|Répartition par source|
+STA_015|StatsTab.jsx|bouton métrique CA|CA|
+STA_016|StatsTab.jsx|bouton métrique nb articles|Nb articles|
+STA_017|StatsTab.jsx|titre section panier moyen par tag|Panier moyen par tag|
+STA_018|StatsTab.jsx|titre section calibration prix|Calibration prix|
+STA_019|StatsTab.jsx|label ligne prix listé vs reco IA|Prix listé vs reco IA|
+STA_020|StatsTab.jsx|label ligne prix vente vs prix listé|Prix vente vs prix listé|
+STA_021|StatsTab.jsx|note calibration prix IA|Ces écarts sont transmis à l'IA pour affiner ses suggestions au fil du temps.|
+SET_001|SettingsTab.jsx|confirm supprimer source|Supprimer la source ?|
+SET_002|SettingsTab.jsx|titre suppression source restreinte|Cette source a des articles liés.|
+SET_003|SettingsTab.jsx|bouton supprimer quand même (source)|Supprimer quand même|
+SET_004|SettingsTab.jsx|placeholder input nouvelle source|Ex: Vide-grenier, Emmaüs…|
+SET_005|SettingsTab.jsx|option type personnel (liste)|Perso|
+SET_006|SettingsTab.jsx|option type dépôt-vente (liste)|Dépôt|
+SET_007|SettingsTab.jsx|title bouton monter source|Monter|
+SET_008|SettingsTab.jsx|title bouton descendre source|Descendre|
+SET_011|SettingsTab.jsx|option type personnel (nouvelle source)|Personnel|
+SET_012|SettingsTab.jsx|option type dépôt-vente (nouvelle source)|Dépôt-vente|
+SET_013|SettingsTab.jsx|bouton ajouter source|+ Ajouter|
+SET_014|SettingsTab.jsx|label section sources|Sources|
+SET_015|SettingsTab.jsx|confirm supprimer tag|Supprimer le tag ?|
+SET_017|SettingsTab.jsx|confirm fusion tag|Fusionner ce tag ? Tous les articles seront réassignés, puis le tag supprimé.|
+SET_018|SettingsTab.jsx|label section tags|Tags|
+SET_019|SettingsTab.jsx|title bouton fusionner tag|Fusionner avec un autre tag|
+SET_020|SettingsTab.jsx|title bouton supprimer tag|Supprimer|
+SET_021|SettingsTab.jsx|option fusionner dans (placeholder)|Fusionner dans…|
+SET_022|SettingsTab.jsx|bouton fusionner tag|Fusionner|
+SET_023|SettingsTab.jsx|message tag restreint|Ce tag a des articles liés, suppression bloquée.|
+SET_024|SettingsTab.jsx|bouton réassigner et supprimer tag|Réassigner vers "Autre" et supprimer quand même|
+SET_025|SettingsTab.jsx|placeholder nouvelle catégorie|Ex: Vêtements, Jouets, Déco…|
+SET_026|SettingsTab.jsx|bouton ajouter tag|+ Ajouter|
+SET_027|SettingsTab.jsx|label section profil|Profil|
+SET_028|SettingsTab.jsx|bouton se déconnecter|Se déconnecter|
+SET_029|SettingsTab.jsx|label section génération IA|Génération IA|
+SET_030|SettingsTab.jsx|label groupe objectif|OBJECTIF|
+SET_031|SettingsTab.jsx|label objectif rotation|🔄 Rotation rapide|
+SET_032|SettingsTab.jsx|description objectif rotation|Prix agressifs pour vendre vite|
+SET_033|SettingsTab.jsx|label objectif équilibre|⚖️ Équilibre|
+SET_034|SettingsTab.jsx|description objectif équilibre|Bon prix, bonne marge|
+SET_035|SettingsTab.jsx|label objectif profits|💰 Profits max|
+SET_036|SettingsTab.jsx|description objectif profits|Prix hauts, attente possible|
+SET_037|SettingsTab.jsx|label groupe ton des annonces|TON DES ANNONCES|
+SET_038|SettingsTab.jsx|bouton ton décontracté|Décontracté|
+SET_039|SettingsTab.jsx|bouton ton neutre|Neutre|
+SET_040|SettingsTab.jsx|bouton ton pro|Pro|
+SET_041|SettingsTab.jsx|label toggle hashtags|Hashtags dans les annonces|
+SET_042|SettingsTab.jsx|description toggle hashtags|Recommandé — améliore le référencement Vinted|
+SET_043|SettingsTab.jsx|label groupe mentions fixes|MENTIONS FIXES|
+SET_044|SettingsTab.jsx|description mentions fixes|Texte toujours ajouté à tes annonces — conditions, habitudes d'envoi, préférences…|
+SET_045|SettingsTab.jsx|placeholder mentions fixes|Ex: Pas de Vinted Go. Envoi soigné et protégé. Non fumeur, non animal.|
+SET_046|SettingsTab.jsx|label section malles|Mes Malles|
+SET_047|SettingsTab.jsx|description section malles|Crée une malle par personne pour qui tu vends — leurs articles et leurs finances restent séparés des tiens.|
+SET_048|SettingsTab.jsx|empty state malles|Pas encore de malle — crée-en une pour ta fille, ta mère, une amie…|
+SET_049|SettingsTab.jsx|label champ commission malle|Commission %|
+SET_050|SettingsTab.jsx|texte dynamique commission malle (0%)|tu reverses tout|
+SET_051|SettingsTab.jsx|texte dynamique commission malle (>0%)|tu gardes X%|
+SET_052|SettingsTab.jsx|placeholder description malle|Description (optionnel)|
+SET_054|SettingsTab.jsx|placeholder input nom nouvelle malle|Nom de la malle — ex: Emma, Maman, Les enfants|
+SET_055|SettingsTab.jsx|placeholder input description nouvelle malle|Description (optionnel)|
+SET_056|SettingsTab.jsx|bouton créer malle|+ Créer une malle|
+SET_057|SettingsTab.jsx|confirm supprimer malle|Supprimer la malle ? Les articles associés ne seront pas supprimés.|
+SET_058|SettingsTab.jsx|label section menu Mon compte|Mon compte|
+SET_059|SettingsTab.jsx|description section menu Mon compte|Profil, connexion|
+SET_060|SettingsTab.jsx|label section menu Mes Malles|Mes Malles|
+SET_061|SettingsTab.jsx|description section menu Mes Malles|Vendre pour tes proches, séparé de tes stocks|
+SET_062|SettingsTab.jsx|label section menu Mes annonces|Mes annonces|
+SET_063|SettingsTab.jsx|description section menu Mes annonces|Objectif, ton, hashtags, mentions|
+SET_064|SettingsTab.jsx|label section menu Sources & Tags|Sources & Tags|
+SET_065|SettingsTab.jsx|description section menu Sources & Tags|Gérer tes sources et tes tags|
+SET_066|SettingsTab.jsx|label section menu Notre histoire|Notre histoire|
+SET_067|SettingsTab.jsx|description section menu Notre histoire|Pourquoi Loot existe, FAQ|
+ABT_001|AboutSection.jsx|titre section héro|Pourquoi Loot existe|
+ABT_002|AboutSection.jsx|sous-titre section héro|L'économie circulaire ne manque pas de bonne volonté. Elle manque de temps.|
+ABT_003|AboutSection.jsx|label chapitre LE CONSTAT|LE CONSTAT|
+ABT_004|AboutSection.jsx|texte chapitre LE CONSTAT|Vinted et Leboncoin ont rendu la revente facile. Ce qu'elles n'ont jamais résolu, c'est le temps que ça prend quand même. Trouver les mots, décrire l'état, fixer le prix, écrire la description. Cette friction-là, personne ne l'avait vraiment attaquée avec l'IA.|
+ABT_005|AboutSection.jsx|label chapitre NOTRE RÉPONSE|NOTRE RÉPONSE|
+ABT_006|AboutSection.jsx|texte chapitre NOTRE RÉPONSE|Tu configures une fois ton style, ta stratégie de prix, tes préférences — et Loot génère tes annonces. Tu n'as plus qu'à copier-coller.|
+ABT_007|AboutSection.jsx|label chapitre LES MALLES|LES MALLES|
+ABT_008|AboutSection.jsx|texte chapitre LES MALLES|Tu vends les habits que ton fils a fait grandir de trois tailles, ceux de ton mec qui a la flemme, ceux de ton·ta copain·copine pas à l'aise avec les applis. Tu deviens le revendeur de tout le monde — sans jamais savoir combien tu dois reverser à qui. Loot te donne une Malle par personne : chaque vente tracée, chaque reversement calculé, sans y penser.|
+ABT_009|AboutSection.jsx|label chapitre LA CONVICTION|LA CONVICTION|
+ABT_010|AboutSection.jsx|texte chapitre LA CONVICTION|Chaque frein levé, c'est un vêtement de plus qui trouve une deuxième vie au lieu de dormir dans un placard ou finir à la poubelle. Et pour celles qui en ont fait un vrai savoir-faire, Loot suit aussi le stock comme un outil e-commerce — parce qu'une bonne organisation transforme une activité occasionnelle en revenu additionnel régulier.|
+ABT_011|AboutSection.jsx|titre section FAQ|Questions fréquentes|
+ABT_012|AboutSection.jsx|pied de page About|Fait avec ❤️ pour les chineurs et chineuses organisé·e·s|
+ABT_013|AboutSection.jsx|question FAQ 1|Comment fonctionne la génération d'annonces ?|
+ABT_014|AboutSection.jsx|réponse FAQ 1|Tu prends une ou plusieurs photos de ton article, tu ajoutes quelques infos si besoin (marque, taille, défauts…), et Loot génère automatiquement le titre, la description et un prix recommandé. L'IA analyse tes photos et s'inspire des annonces similaires sur le marché. Tu n'as plus qu'à copier-coller dans Vinted ou LeBonCoin.|
+ABT_015|AboutSection.jsx|question FAQ 2|Pourquoi je ne peux pas lier mon compte Vinted directement ?|
+ABT_016|AboutSection.jsx|réponse FAQ 2|On adorerait. Vraiment. Mais Vinted interdit toute application tierce qui se connecte à un compte au nom d'un utilisateur — et la sanction est un ban immédiat et définitif du compte. On ne prend pas ce risque pour toi. Le jour où Vinted ouvre une vraie API officielle, on sort le champagne 🍾|
+ABT_017|AboutSection.jsx|question FAQ 3|C'est quoi une Malle ?|
+ABT_018|AboutSection.jsx|réponse FAQ 3|Une Malle, c'est un espace dédié à une personne pour qui tu vends — ta fille, ton mari, ta copine, ta mère. Chaque article y est rattaché, chaque vente est tracée, et Loot calcule automatiquement ce que tu dois reverser. Fini le carnet ou le tableau Excel bricolé.|
+ABT_019|AboutSection.jsx|question FAQ 4|L'IA est-elle précise sur les prix ?|
+ABT_020|AboutSection.jsx|réponse FAQ 4|Elle s'améliore au fil du temps grâce à tes vraies données. Loot compare les prix recommandés avec ceux que tu as réellement listés et vendus, puis ajuste ses suggestions. Plus tu l'utilises, plus elle colle à ta réalité.|
+ABT_021|AboutSection.jsx|question FAQ 5|Mes données sont-elles sécurisées ?|
+ABT_022|AboutSection.jsx|réponse FAQ 5|Tes données sont stockées dans une base sécurisée (Supabase), chiffrées, et uniquement accessibles avec ton compte Google. On ne stocke jamais de mots de passe Vinted ou LeBonCoin — ni maintenant, ni jamais.|
+ABT_023|AboutSection.jsx|question FAQ 6|Loot est-il gratuit ?|
+ABT_024|AboutSection.jsx|réponse FAQ 6|Loot est en accès anticipé gratuit. Une version freemium est prévue pour permettre à tout le monde d'accéder aux fonctionnalités essentielles, avec des options avancées pour les power users.|
+EDM_001|EditModal.jsx|titre modale|Détail de l'article|
+EDM_002|EditModal.jsx|label champ nom|Nom|
+EDM_003|EditModal.jsx|label section annonce|Annonce|
+EDM_004|EditModal.jsx|bouton régénérer (chargement)|Régénération…|
+EDM_005|EditModal.jsx|bouton régénérer|🔄 Régénérer|
+EDM_006|EditModal.jsx|placeholder textarea description|Description générée…|
+EDM_007|EditModal.jsx|label reco IA prix|💡 Reco IA :|
+EDM_008|EditModal.jsx|contenu InfoBubble reco IA|Ce prix est estimé à partir des articles actuellement listés sur le marché — pas ceux réellement vendus. Les vendeurs surestiment souvent leurs prix. Pour un repère plus fiable, consulte les ventes récentes sur Vinted (filtre "Vendus") : c'est ce que les acheteurs ont vraiment payé.|
+EDM_009|EditModal.jsx|label champ tags|Tags|
+EDM_010|EditModal.jsx|label champ source|Source|
+EDM_011|EditModal.jsx|label champ statut|Statut|
+EDM_012|EditModal.jsx|option statut en attente|En attente|
+EDM_013|EditModal.jsx|option statut en vente|En vente|
+EDM_014|EditModal.jsx|option statut vendu|Vendu|
+EDM_015|EditModal.jsx|label champ prix achat|Prix achat €|
+EDM_016|EditModal.jsx|label champ prix listé|Prix listé €|
+EDM_017|EditModal.jsx|label champ prix vente réel|Prix vente réel €|
+EDM_018|EditModal.jsx|label champ note prix|Note prix|
+EDM_019|EditModal.jsx|placeholder input note prix|Pourquoi ce prix ?|
+EDM_020|EditModal.jsx|label champ plateformes|Plateformes|
+EDM_021|EditModal.jsx|label section dépôt-vente|Dépôt-vente|
+EDM_022|EditModal.jsx|label champ commission|Commission %|
+EDM_024|EditModal.jsx|texte reversement déjà payé|✓ Reversé le {date}|
+EDM_025|EditModal.jsx|bouton marquer payé (dépôt-vente)|Marquer payé|
+EDM_026|EditModal.jsx|bouton annuler modifications|Annuler les modifs|
+EDM_028|EditModal.jsx|message erreur régénération|Erreur de régénération. Réessaie.|
+RES_001|ResultEdit.jsx|label section titre|Titre|
+RES_002|ResultEdit.jsx|label section publier sur|Publier sur|
+RES_003|ResultEdit.jsx|label section Vinted|● Vinted|
+RES_004|ResultEdit.jsx|label bouton copier description Vinted|Description + tags|
+RES_005|ResultEdit.jsx|note hashtags Vinted|Hashtags inclus en bas du texte, modifiables directement.|
+RES_006|ResultEdit.jsx|label section LeBonCoin|● LeBonCoin|
+RES_007|ResultEdit.jsx|label reco IA prix|Reco IA :|
+MAL_001|MalleSelect.jsx|label champ malle|🧳 Malle|
+MAL_002|MalleSelect.jsx|option malle par défaut|— Mes articles perso —|
+SRC_001|SourceSelect.jsx|placeholder input nom source|Nom de la source (ex: Champigny, Emmaüs…)|
+SRC_002|SourceSelect.jsx|option type personnel|Personnel|
+SRC_003|SourceSelect.jsx|option type dépôt-vente|Dépôt-vente|
+SRC_004|SourceSelect.jsx|placeholder input commission|Commission %|
+SRC_005|SourceSelect.jsx|bouton ajouter source|Ajouter|
+SRC_006|SourceSelect.jsx|bouton annuler ajout source|Annuler|
+SRC_007|SourceSelect.jsx|option source par défaut (vide)|— Source —|
+SRC_008|SourceSelect.jsx|option ajouter une source|+ Ajouter une source…|
+CHT_001|ChatRefinement.jsx|titre section chat|💬 Affiner l'annonce|
+CHT_002|ChatRefinement.jsx|message IA par défaut|✓ Annonce mise à jour|
+CHT_003|ChatRefinement.jsx|texte chargement réponse IA|Correction…|
+CHT_004|ChatRefinement.jsx|placeholder input chat|Ex: baisse le prix, corrige le titre, ajoute #vintage…|
+CHT_005|ChatRefinement.jsx|bouton envoyer|Envoyer|
+CHT_006|ChatRefinement.jsx|message erreur chat|Erreur, réessaie.|

@@ -1,0 +1,15 @@
+{
+  "name": "Loot — Ton butin, notre IA, tes profits",
+  "short_name": "Loot",
+  "description": "Génère et gère tes annonces Vinted et LeBonCoin",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F03C64",
+  "theme_color": "#FFF0F2",
+  "icons": [
+    { "src": "/icons/icon-192.png",          "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png",          "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\nodejs\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\" -ErrorAction SilentlyContinue; where.exe node 2>&1)",
+      "PowerShell(winget install -e --id OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements)",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); node -v; npm -v)",
+      "Bash(npx oxlint *)",
+      "Bash(npx vite *)",
+      "mcp__ca94a463-ffd2-44fc-971e-aa7c9126c17a__read_file_content",
+      "Bash(ls -la /c/Users/user/ | head -30 && echo \"---LOOT---\" && ls -la /c/Users/user/Loot)"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Loot">
+  <rect x="0" y="0" width="256" height="256" rx="58" fill="#1C1B3A"></rect>
+  <g fill="none" stroke="#F03C64" stroke-width="14" stroke-linecap="round">
+    <path d="M160.1,39.7 A94,94 0 0 1 160.1,216.3"></path>
+    <path d="M95.9,216.3 A94,94 0 0 1 95.9,39.7"></path>
+  </g>
+  <g fill="#F03C64">
+    <polygon points="145.1,221.8 169.5,224.5 161.9,203.9"></polygon>
+    <polygon points="110.9,34.2 94.1,52.1 86.5,31.5"></polygon>
+  </g>
+  <path d="M68,126 L68,116 Q68,98 88,98 L168,98 Q188,98 188,116 L188,126 Z" fill="#F03C64"></path>
+  <rect x="74" y="130" width="108" height="48" rx="10" fill="#F03C64"></rect>
+  <rect x="116" y="116" width="24" height="32" rx="6" fill="#F03C64"></rect>
+  <circle cx="128" cy="129" r="4.5" fill="#1C1B3A"></circle>
+  <rect x="125.5" y="130" width="5" height="10" rx="2" fill="#1C1B3A"></rect>
+  <path d="M206,34 L210.2,49.8 L226,54 L210.2,58.2 L206,74 L201.8,58.2 L186,54 L201.8,49.8 Z" fill="#4FD48A"></path>
+</svg>
