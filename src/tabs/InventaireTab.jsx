@@ -15,7 +15,7 @@ const C = {
   canvas: "#F6F2EC", surface: "#FFFFFF", ink: "#1C1B3A",
   muted1: "#6B6980", muted2: "#8A879B", muted3: "#9C99AB", muted4: "#B7AE9E",
   border: "#E3DCD0", divider: "#F0EBE3",
-  coral: "#F03C64", coralPressed: "#C22A50",
+  coral: "#F03C64", coralPressed: "#C22A50", coralTint: "#FFF0F2",
   green: "#2FA96A", greenDark: "#1E8A57", greenTint: "#DDF1E6", greenSoft: "#EDF7F1",
   amber: "#E0912F", amberText: "#B0651B", amberTint: "#FBEAD1",
   violet: "#A56BE0", violetText: "#8B4FC9", violetTint: "#F0E7FA",
@@ -52,9 +52,9 @@ function StatutBadge({ statut }) {
 }
 
 function Card({ item, sourcesById, mallesById, onMarkSold, onOpen }) {
-  const shownPrice = item.statut === "vendu"
-    ? (parseFloat(item.prixVente) || parseFloat(item.prixAffiche) || null)
-    : (parseFloat(item.prixAffiche) || null);
+  const prixV = (item.prixVente !== "" && item.prixVente != null) ? parseFloat(item.prixVente) : null;
+  const prixA = parseFloat(item.prixAffiche) || null;
+  const shownPrice = item.statut === "vendu" ? (prixV ?? prixA) : prixA;
   const achat = (item.prixAchat !== null && item.prixAchat !== "") ? parseFloat(item.prixAchat) : 0;
   let commission = 0;
   if (item.malleId) {
@@ -96,9 +96,11 @@ function Card({ item, sourcesById, mallesById, onMarkSold, onOpen }) {
               {achat != null ? ` · achat ${achat} €` : ""}
             </span>
             {margin != null ? (
-              <span style={{ marginLeft: "auto", font: `800 12.5px ${F.body}`, color: C.greenDark,
-                background: C.greenSoft, padding: "4px 10px", borderRadius: 999 }}>
-                +{margin} €
+              <span style={{ marginLeft: "auto", font: `800 12.5px ${F.body}`,
+                color: margin >= 0 ? C.greenDark : C.coral,
+                background: margin >= 0 ? C.greenSoft : C.coralTint,
+                padding: "4px 10px", borderRadius: 999 }}>
+                {margin >= 0 ? "+" : ""}{margin} €
               </span>
             ) : null}
           </div>

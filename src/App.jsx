@@ -223,6 +223,7 @@ const ITEMS_CACHE_KEY = "loot:items-cache";
 
 export default function App() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [tab, setTab]           = useState("generer");
   const [genPhase, setGenPhase] = useState("photos");
   const genGoBackRef            = useRef(null);
@@ -254,7 +255,11 @@ export default function App() {
   };
   const upd = async (u, sourceType) => {
     const updated = await updateItem(u, user.id, sourceType);
-    setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+    setItems((prev) => {
+      const next = prev.map((i) => (i.id === updated.id ? updated : i));
+      try { localStorage.setItem(ITEMS_CACHE_KEY + ":" + user.id, JSON.stringify(next)); } catch { /* quota */ }
+      return next;
+    });
   };
   const del = async (id) => {
     await deleteItem(id, user.id);
@@ -325,8 +330,12 @@ export default function App() {
           item={detailItem}
           onBack={() => setDetailItem(null)}
           onSave={async (updated, sourceType) => {
-            await upd(updated, sourceType);
-            setDetailItem(null);
+            try {
+              await upd(updated, sourceType);
+              setDetailItem(null);
+            } catch (err) {
+              showToast("✗ " + (err?.message || "Erreur de sauvegarde"));
+            }
           }}
           onDelete={async (id) => {
             await del(id);
