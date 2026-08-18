@@ -388,12 +388,22 @@ export function StatsTab({ items }) {
     .filter((i) => tagFilter.length === 0 || tagFilter.every((id) => (i.tagIds || []).includes(id)))
     .filter((i) => malleFilter === "tout" || (malleFilter === "moi" ? !i.malleId : i.malleId === malleFilter));
 
-  const { vendus: vendusAll, tv: tvAll, ta, marge: margeAll, roi, withReco, avgEcartPct, avgVentePct, venduWithPrix, avgTimeToSell, avgStockAge } = computeStats(scoped);
+  const { vendus: vendusAll, tv: tvAll, ta, marge: margeAll, roi: roiAll, withReco, avgEcartPct, avgStockAge } = computeStats(scoped);
   const vendus = cutoff ? vendusAll.filter((i) => ((i.venduAt || i.createdAt) || "").slice(0, 10) >= cutoff) : vendusAll;
   const tv = vendus.reduce((s, i) => s + (parseFloat(i.prixVente) || 0), 0);
+  const tav = vendus.reduce((s, i) => s + (parseFloat(i.prixAchat) || 0), 0);
   const marge = vendus.reduce((s, i) => s + (parseFloat(i.prixVente) || 0) - (parseFloat(i.prixAchat) || 0) - (i.malleId && i.montantAReverser ? parseFloat(i.montantAReverser) : 0), 0);
+  const roi = tav > 0 ? Math.round(((tv - tav) / tav) * 100) : null;
   const panierMoyen = vendus.length > 0 ? tv / vendus.length : 0;
   const tauxVente = scoped.length > 0 ? Math.round((vendus.length / scoped.length) * 100) : 0;
+  const venduWithPrix = vendus.filter((i) => parseFloat(i.prixVente) > 0 && parseFloat(i.prixAffiche) > 0);
+  const avgVentePct = venduWithPrix.length > 0
+    ? Math.round(venduWithPrix.reduce((s, i) => s + ((parseFloat(i.prixVente) - parseFloat(i.prixAffiche)) / parseFloat(i.prixAffiche)) * 100, 0) / venduWithPrix.length)
+    : null;
+  const vendusWithDates = vendus.filter((i) => i.createdAt && i.venduAt);
+  const avgTimeToSell = vendusWithDates.length > 0
+    ? Math.round(vendusWithDates.reduce((s, i) => s + (new Date(i.venduAt) - new Date(i.createdAt)) / (1000 * 60 * 60 * 24), 0) / vendusWithDates.length)
+    : null;
 
   const bySource = Object.values(
     vendus.filter((i) => !i.malleId).reduce((acc, i) => {

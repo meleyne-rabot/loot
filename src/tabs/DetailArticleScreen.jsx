@@ -68,6 +68,7 @@ export function DetailArticleScreen({ item, onBack, onSave, onDelete }) {
   const [achat, setAchat] = useState(a.prixAchat ?? "");
   const [prixListe, setPrixListe] = useState(a.prixAffiche ?? "");
   const [venteReel, setVenteReel] = useState(a.prixVente ?? "");
+  const [venduAtDate, setVenduAtDate] = useState(a.venduAt ? a.venduAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
   const [commissionPct, setCommissionPct] = useState(a.commissionPct ?? 0);
   const [reversePaye, setReversePaye] = useState(a.reversePaye || false);
   const [dateReversement, setDateReversement] = useState(a.dateReversement || new Date().toISOString().slice(0, 10));
@@ -112,6 +113,7 @@ export function DetailArticleScreen({ item, onBack, onSave, onDelete }) {
       statut, prixAchat: String(achat), prixAffiche: String(prixListe),
       prixVente: String(venteReel), commissionPct, reversePaye, dateReversement,
       malleId, malleCommissionPct,
+      venduAt: statut === "vendu" ? (venduAtDate ? new Date(venduAtDate + "T12:00:00").toISOString() : a.venduAt) : null,
     }, sourceObj?.type);
   };
 
@@ -278,6 +280,15 @@ export function DetailArticleScreen({ item, onBack, onSave, onDelete }) {
               }} inputMode="decimal" placeholder="—"
                 style={{ ...field, width: "100%", font: `600 14px ${F.body}`, color: C.ink, outline: "none" }} />
             </div>
+
+            {/* date de vente */}
+            {statut === "vendu" && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ ...lbl, marginBottom: 7 }}>Date de vente</div>
+                <input type="date" value={venduAtDate} onChange={e => setVenduAtDate(e.target.value)}
+                  style={{ ...field, width: "100%", font: `600 14px ${F.body}`, color: C.ink, outline: "none" }} />
+              </div>
+            )}
 
             {/* statut + plateforme */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16 }}>
