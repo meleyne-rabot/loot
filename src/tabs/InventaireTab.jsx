@@ -68,8 +68,9 @@ function Card({ item, sourcesById, mallesById, onMarkSold, onOpen }) {
   const margin = shownPrice != null && achat != null ? +(shownPrice - achat - commission).toFixed(2) : null;
   const platLabel = item.plateformes?.[0] === "leboncoin" ? "LBC" : "Vinted";
 
+  const sold = item.statut === "vendu";
   return (
-    <div style={{ background: C.surface, borderRadius: 18, padding: 12, boxShadow: SHADOW.cardHi, marginBottom: 11 }}>
+    <div style={{ background: C.surface, borderRadius: 18, padding: 12, boxShadow: SHADOW.cardHi, marginBottom: 11, opacity: sold ? 0.55 : 1 }}>
       <div onClick={() => onOpen(item)} style={{ display: "flex", gap: 12, cursor: "pointer" }}>
         <div style={{ width: 76, height: 76, borderRadius: 14, flexShrink: 0,
           background: item.image ? `center/cover url(${item.image})` : C.photoStripe }} />
@@ -202,7 +203,7 @@ export function InventaireTab({ items, onUpdate, onDelete, onItemPatched, onGoTo
   const { user } = useAuth();
   const { showToast } = useToast();
   const [q, setQ] = useState("");
-  const [statut, setStatut] = useState("tous");
+  const [statut, setStatut] = useState("en-vente");
   const [filterOpen, setFilterOpen] = useState(false);
   const [tagFilter, setTagFilter] = useState([]);
   const [sourceFilter, setSourceFilter] = useState([]);

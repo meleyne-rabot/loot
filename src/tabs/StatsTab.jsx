@@ -403,7 +403,10 @@ export function StatsTab({ items }) {
   const marge = vendus.reduce((s, i) => s + (parseFloat(i.prixVente) || 0) - (parseFloat(i.prixAchat) || 0) - (i.malleId && i.montantAReverser ? parseFloat(i.montantAReverser) : 0), 0);
   const roi = tav > 0 ? Math.round(((tv - tav) / tav) * 100) : null;
   const panierMoyen = vendus.length > 0 ? tv / vendus.length : 0;
-  const tauxVente = scopedPeriod.length > 0 ? Math.round((vendus.length / scopedPeriod.length) * 100) : 0;
+  // Articles "actifs" sur la période = ajoutés OU vendus dans la période (union sans doublons)
+  const scopedPeriodIds = new Set(scopedPeriod.map(i => i.id));
+  const activeInPeriod = [...scopedPeriod, ...vendus.filter(i => !scopedPeriodIds.has(i.id))];
+  const tauxVente = activeInPeriod.length > 0 ? Math.round((vendus.length / activeInPeriod.length) * 100) : 0;
   const venduWithPrix = vendus.filter((i) => parseFloat(i.prixVente) > 0 && parseFloat(i.prixAffiche) > 0);
   const avgVentePct = venduWithPrix.length > 0
     ? Math.round(venduWithPrix.reduce((s, i) => s + ((parseFloat(i.prixVente) - parseFloat(i.prixAffiche)) / parseFloat(i.prixAffiche)) * 100, 0) / venduWithPrix.length)
