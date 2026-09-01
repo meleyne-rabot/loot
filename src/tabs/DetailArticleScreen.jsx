@@ -106,7 +106,7 @@ export function DetailArticleScreen({ item, onBack, onSave, onDelete }) {
       }
       const r = await callAI([imagePayload], name, user?.user_metadata?.full_name);
       setDesc((r.description_vinted || "") + (r.hashtags?.length ? "\n\n" + r.hashtags.map(h => "#" + h.replace(/^#/, "")).join(" ") : ""));
-    } catch { setRegenError("Erreur de régénération. Réessaie."); }
+    } catch (err) { setRegenError(err?.message || "Erreur de régénération. Réessaie."); }
     setRegenerating(false);
   };
 
