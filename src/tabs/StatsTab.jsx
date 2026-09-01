@@ -388,8 +388,11 @@ export function StatsTab({ items }) {
     .filter((i) => tagFilter.length === 0 || tagFilter.every((id) => (i.tagIds || []).includes(id)))
     .filter((i) => malleFilter === "tout" || (malleFilter === "moi" ? !i.malleId : i.malleId === malleFilter));
 
-  const { vendus: vendusAll, tv: tvAll, ta, marge: margeAll, roi: roiAll, withReco, avgEcartPct, avgStockAge } = computeStats(scoped);
+  const { vendus: vendusAll, tv: tvAll, marge: margeAll, roi: roiAll, withReco, avgEcartPct, avgStockAge } = computeStats(scoped);
   const vendus = cutoff ? vendusAll.filter((i) => ((i.venduAt || i.createdAt) || "").slice(0, 10) >= cutoff) : vendusAll;
+  // nb articles + dépense nette filtrés par période (cutoff sur createdAt)
+  const scopedPeriod = cutoff ? scoped.filter(i => (i.createdAt || "").slice(0, 10) >= cutoff) : scoped;
+  const ta = scopedPeriod.reduce((s, i) => s + (parseFloat(i.prixAchat) || 0), 0);
   const tv = vendus.reduce((s, i) => s + (parseFloat(i.prixVente) || 0), 0);
   const tav = vendus.reduce((s, i) => s + (parseFloat(i.prixAchat) || 0), 0);
   const marge = vendus.reduce((s, i) => s + (parseFloat(i.prixVente) || 0) - (parseFloat(i.prixAchat) || 0) - (i.malleId && i.montantAReverser ? parseFloat(i.montantAReverser) : 0), 0);
@@ -494,7 +497,7 @@ export function StatsTab({ items }) {
         <MetricCard icon={<CheckCircle size={17} weight="fill" />} value={vendus.length} label="Vendus" iconColor="var(--green)" />
         <MetricCard icon={<Lightning size={17} weight="fill" />} value={tauxVente + " %"} label="Taux de vente" />
         <MetricCard icon={<ShoppingBag size={17} weight="fill" />} value={panierMoyen.toFixed(2).replace(".", ",") + " €"} label="Panier moyen" />
-        <MetricCard icon={<Package size={17} weight="fill" />} value={scoped.length} label="Articles" />
+        <MetricCard icon={<Package size={17} weight="fill" />} value={scopedPeriod.length} label="Articles" />
         <MetricCard icon={<Wallet size={17} weight="fill" />} value={ta.toFixed(0) + " €"} label="Dépense nette" />
         {avgTimeToSell !== null && (
           <MetricCard icon={<Timer size={17} weight="fill" />} value={avgTimeToSell + " j"} label="Délai de vente moy." iconColor="var(--navy)" />

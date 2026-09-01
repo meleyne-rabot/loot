@@ -97,8 +97,14 @@ export function DetailArticleScreen({ item, onBack, onSave, onDelete }) {
     if (!a.image) return;
     setRegenerating(true); setRegenError("");
     try {
-      const [, meta, data] = a.image.match(/^data:([^;]+);base64,(.+)$/) || [];
-      const r = await callAI([{ data, type: meta || "image/jpeg" }], name, user?.user_metadata?.full_name);
+      let imagePayload;
+      if (a.image.startsWith("data:")) {
+        const [, meta, data] = a.image.match(/^data:([^;]+);base64,(.+)$/) || [];
+        imagePayload = { data, type: meta || "image/jpeg" };
+      } else {
+        imagePayload = { url: a.image };
+      }
+      const r = await callAI([imagePayload], name, user?.user_metadata?.full_name);
       setDesc((r.description_vinted || "") + (r.hashtags?.length ? "\n\n" + r.hashtags.map(h => "#" + h.replace(/^#/, "")).join(" ") : ""));
     } catch { setRegenError("Erreur de régénération. Réessaie."); }
     setRegenerating(false);

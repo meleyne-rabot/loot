@@ -63,7 +63,11 @@ JSON strict, aucun texte ni backtick :
 function firstUserContent(images, context) {
   const content = [];
   for (const img of images) {
-    content.push({ type: "image", source: { type: "base64", media_type: img.type, data: img.data } });
+    if (img.url) {
+      content.push({ type: "image", source: { type: "url", url: img.url } });
+    } else {
+      content.push({ type: "image", source: { type: "base64", media_type: img.type, data: img.data } });
+    }
   }
   content.push({ type: "text", text: "Génère une annonce." + (context ? " Infos : " + context : "") + " JSON uniquement." });
   return content;
