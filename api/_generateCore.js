@@ -60,11 +60,17 @@ JSON strict, aucun texte ni backtick :
 → Mets "vintage":true et "categorie":"vintage" si l'objet date de plus de ~15 ans (années 2000 et avant, jouets rétro, vêtements vintage, vaisselle ancienne…). Sinon "vintage":false.`;
 }
 
-function firstUserContent(images, context) {
+async function firstUserContent(images, context) {
   const content = [];
   for (const img of images) {
     if (img.url) {
-      content.push({ type: "image", source: { type: "url", url: img.url } });
+      // Image stockée comme URL (ex : malle Ulysse) — on la télécharge et convertit en base64
+      // pour éviter les problèmes d'accès (Supabase Storage privé, URL signée…)
+      const res = await fetch(img.url);
+      const buf = await res.arrayBuffer();
+      const b64 = Buffer.from(buf).toString("base64");
+      const mediaType = res.headers.get("content-type")?.split(";")[0] || "image/jpeg";
+      content.push({ type: "image", source: { type: "base64", media_type: mediaType, data: b64 } });
     } else {
       content.push({ type: "image", source: { type: "base64", media_type: img.type, data: img.data } });
     }
@@ -82,14 +88,15 @@ export async function runGenerate({ images, context, mode, currentResult, chatHi
     return { status: 400, body: { error: "images requis" } };
   }
 
+  const userContent = await firstUserContent(images, context);
   const messages =
     mode === "refine"
       ? [
-          { role: "user", content: firstUserContent(images, context) },
+          { role: "user", content: userContent },
           { role: "assistant", content: JSON.stringify(currentResult) },
           ...(chatHistory || []),
         ]
-      : [{ role: "user", content: firstUserContent(images, context) }];
+      : [{ role: "user", content: userContent }];
 
   const system =
     buildSystem(userName, mode === "generate" ? calibrationNote : null, mode === "generate" ? userPrefs : null) +
