@@ -9,7 +9,7 @@ import { listMalles } from "../lib/malles";
 import { SourceSelect } from "../components/SourceSelect";
 import { TagSelect } from "../components/TagSelect";
 import {
-  ArrowLeft, Check, Copy, ArrowClockwise, Lightbulb, Trash,
+  ArrowLeft, Check, Copy, ArrowClockwise, Lightbulb, Trash, Package, X, MagnifyingGlass,
 } from "@phosphor-icons/react";
 
 // ─── tokens ────────────────────────────────────────────────────────────────
@@ -52,7 +52,160 @@ function CopyBtn({ text }) {
   );
 }
 
-export function DetailArticleScreen({ item, onBack, onSave, onDelete }) {
+function LotItemRow({ item, prix, checked, onToggle, fixed }) {
+  return (
+    <div onClick={!fixed ? onToggle : undefined}
+      style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", marginBottom: 6,
+        background: checked || fixed ? C.surface : C.canvas, borderRadius: 12,
+        border: `1.5px solid ${checked || fixed ? C.border : "transparent"}`,
+        cursor: fixed ? "default" : "pointer", userSelect: "none" }}>
+      <div style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+        border: fixed ? "none" : `2px solid ${checked ? C.coral : C.border}`,
+        background: fixed ? C.ink : checked ? C.coral : "#fff",
+        display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {(checked || fixed) && <Check size={11} weight="bold" color="#fff" />}
+      </div>
+      <div style={{ width: 38, height: 38, borderRadius: 9, flexShrink: 0,
+        background: item.image ? `center/cover url(${item.image})` : C.photoStripe }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ font: `600 13px ${F.body}`, color: C.ink,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {item.name || "Sans titre"}
+        </div>
+        <div style={{ font: `400 11px ${F.body}`, color: C.muted2, marginTop: 1 }}>
+          Listé {item.prixAffiche || "—"} €
+        </div>
+      </div>
+      {prix != null && (
+        <div style={{ font: `700 13px ${F.body}`, color: C.greenDark, flexShrink: 0,
+          background: C.greenSoft, padding: "3px 8px", borderRadius: 8 }}>
+          {prix} €
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LotModal({ currentItem, allItems, venduAtDate, onClose, onConfirm }) {
+  const [selected, setSelected] = useState(new Set());
+  const [totalPrice, setTotalPrice] = useState("");
+  const [search, setSearch] = useState("");
+
+  const available = allItems.filter(i => i.statut !== "vendu" && i.id !== currentItem.id);
+  const filtered = search.trim()
+    ? available.filter(i => (i.name || "").toLowerCase().includes(search.trim().toLowerCase()))
+    : available;
+
+  const lotItems = [currentItem, ...available.filter(i => selected.has(i.id))];
+  const total = parseFloat(totalPrice) || 0;
+  const sumAffiche = lotItems.reduce((s, i) => s + (parseFloat(i.prixAffiche) || 0), 0);
+
+  const getPrix = (item) => {
+    if (!total) return null;
+    if (sumAffiche === 0) return +(total / lotItems.length).toFixed(2);
+    const ratio = (parseFloat(item.prixAffiche) || 0) / sumAffiche;
+    return +(ratio * total).toFixed(2);
+  };
+
+  const toggle = (id) => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const confirm = () => {
+    if (!total) return;
+    const venduAt = venduAtDate
+      ? new Date(venduAtDate + "T12:00:00").toISOString()
+      : new Date().toISOString();
+    onConfirm(lotItems.map(i => ({
+      ...i, statut: "vendu",
+      prixVente: String(getPrix(i) ?? ""),
+      venduAt,
+    })));
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 65, background: "rgba(28,27,58,.45)",
+      display: "flex", alignItems: "flex-end" }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: C.canvas, borderRadius: "22px 22px 0 0", width: "100%",
+        maxHeight: "88vh", display: "flex", flexDirection: "column" }}>
+
+        {/* handle */}
+        <div style={{ width: 36, height: 4, borderRadius: 99, background: C.border,
+          margin: "10px auto 0", flexShrink: 0 }} />
+
+        {/* header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "14px 18px 0", flexShrink: 0 }}>
+          <span style={{ font: `700 16px ${F.title}`, color: C.ink }}>Vente en lot</span>
+          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer",
+            color: C.muted2, display: "flex", alignItems: "center", padding: 4 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* prix total — sticky */}
+        <div style={{ padding: "12px 18px 0", flexShrink: 0 }}>
+          <div style={{ ...lbl, marginBottom: 7 }}>Prix total du lot €</div>
+          <input value={totalPrice} onChange={e => setTotalPrice(e.target.value)}
+            inputMode="decimal" placeholder="0.00" autoFocus
+            style={{ ...field, width: "100%", boxSizing: "border-box",
+              font: `700 22px ${F.title}`, color: C.ink, outline: "none" }} />
+        </div>
+
+        {/* scrollable body */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "14px 18px 0" }}>
+
+          {/* article courant — toujours dans le lot */}
+          <div style={{ ...lbl, marginBottom: 8 }}>Article principal</div>
+          <LotItemRow item={currentItem} prix={getPrix(currentItem)} fixed />
+
+          {/* recherche */}
+          <div style={{ position: "relative", margin: "14px 0 8px" }}>
+            <MagnifyingGlass size={15} style={{ position: "absolute", left: 13, top: "50%",
+              transform: "translateY(-50%)", color: C.muted3, pointerEvents: "none" }} />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher un article…"
+              style={{ ...field, width: "100%", boxSizing: "border-box",
+                paddingLeft: 36, font: `400 13px ${F.body}`, color: C.ink, outline: "none" }} />
+          </div>
+
+          {filtered.length === 0 && (
+            <p style={{ font: `400 12px ${F.body}`, color: C.muted2, textAlign: "center", margin: "16px 0" }}>
+              {available.length === 0 ? "Aucun autre article en vente." : "Aucun résultat."}
+            </p>
+          )}
+          {filtered.map(i => (
+            <LotItemRow key={i.id} item={i} prix={selected.has(i.id) ? getPrix(i) : null}
+              checked={selected.has(i.id)} onToggle={() => toggle(i.id)} />
+          ))}
+
+          <div style={{ height: 8 }} />
+        </div>
+
+        {/* footer — confirmer */}
+        <div style={{ padding: "12px 18px 32px", flexShrink: 0,
+          borderTop: `1px solid ${C.divider}`, background: C.canvas }}>
+          {total > 0 && (
+            <div style={{ font: `400 11.5px ${F.body}`, color: C.muted2, marginBottom: 8, textAlign: "center" }}>
+              Répartition proportionnelle au prix listé · {lotItems.length} articles · {total} €
+            </div>
+          )}
+          <button onClick={confirm} disabled={!total}
+            style={{ width: "100%", background: total ? C.coral : C.border, color: "#fff",
+              border: "none", borderRadius: 14, padding: "14px 0",
+              font: `700 14px ${F.body}`, cursor: total ? "pointer" : "default",
+              boxShadow: total ? "0 5px 14px rgba(240,60,100,.3)" : "none" }}>
+            Valider le lot{total ? ` · ${total} €` : ""}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DetailArticleScreen({ item, onBack, onSave, onDelete, allItems = [], onSaveLot }) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const a = item || {};
@@ -75,6 +228,7 @@ export function DetailArticleScreen({ item, onBack, onSave, onDelete }) {
   const [malles, setMalles] = useState([]);
   const [regenerating, setRegenerating] = useState(false);
   const [regenError, setRegenError] = useState("");
+  const [showLot, setShowLot] = useState(false);
 
   useEffect(() => {
     listMalles(user.id).then(setMalles).catch(() => {});
@@ -296,6 +450,17 @@ export function DetailArticleScreen({ item, onBack, onSave, onDelete }) {
               </div>
             )}
 
+            {/* vente en lot */}
+            {statut === "vendu" && onSaveLot && (
+              <button onClick={() => setShowLot(true)}
+                style={{ width: "100%", marginTop: 10, background: "#F0EBFF",
+                  color: "#5B35CC", border: "1.5px solid #D4C4F5", borderRadius: 14,
+                  padding: "11px 0", font: `700 13px ${F.body}`, cursor: "pointer",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                <Package size={15} weight="fill" />Vendre en lot avec d'autres articles
+              </button>
+            )}
+
             {/* statut + plateforme */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16 }}>
               <div>
@@ -425,6 +590,19 @@ export function DetailArticleScreen({ item, onBack, onSave, onDelete }) {
           </>
         )}
       </div>
+
+      {showLot && (
+        <LotModal
+          currentItem={{ ...a, name, prixAffiche: String(prixListe), prixVente: String(venteReel), statut }}
+          allItems={allItems}
+          venduAtDate={venduAtDate}
+          onClose={() => setShowLot(false)}
+          onConfirm={(lotItems) => {
+            setShowLot(false);
+            onSaveLot?.(lotItems);
+          }}
+        />
+      )}
     </div>
   );
 }

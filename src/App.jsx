@@ -328,11 +328,23 @@ export default function App() {
       {detailItem && (
         <DetailArticleScreen
           item={detailItem}
+          allItems={items}
           onBack={() => setDetailItem(null)}
           onSave={async (updated, sourceType) => {
             try {
               await upd(updated, sourceType);
               setDetailItem(null);
+            } catch (err) {
+              showToast("✗ " + (err?.message || "Erreur de sauvegarde"));
+            }
+          }}
+          onSaveLot={async (lotItems) => {
+            try {
+              for (const it of lotItems) {
+                await upd(it, it.malleId ? undefined : null);
+              }
+              setDetailItem(null);
+              showToast(`✓ Lot de ${lotItems.length} articles enregistré`);
             } catch (err) {
               showToast("✗ " + (err?.message || "Erreur de sauvegarde"));
             }

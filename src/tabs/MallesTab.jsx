@@ -297,17 +297,16 @@ export function MallesTab() {
                       <ShareNetwork size={13} />Partager
                     </button>
                     <button
-                      onClick={doit > 0 ? () => setViewing(m) : undefined}
-                      disabled={doit === 0}
+                      onClick={() => setViewing(m)}
                       style={{
                         background: doit > 0 ? "#F03C64" : "#E3DCD0",
-                        color: doit > 0 ? "#fff" : "#A8A098",
+                        color: doit > 0 ? "#fff" : "#7A7060",
                         border: "none", borderRadius: 20,
                         padding: "5px 14px", fontSize: 12, fontWeight: 700,
-                        cursor: doit > 0 ? "pointer" : "not-allowed",
+                        cursor: "pointer",
                         fontFamily: "'Hanken Grotesk', sans-serif", flexShrink: 0,
                       }}
-                    >Reverser</button>
+                    >{doit > 0 ? "Reverser" : "Historique"}</button>
                   </div>
                   {/* Ligne 2 : statut — toujours en bas, ne bouge pas les boutons */}
                   <div style={{ marginTop: 8 }}>
