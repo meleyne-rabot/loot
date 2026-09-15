@@ -197,6 +197,146 @@ const PERIODS = [
   { label: "Mois",    type: "month", count: 12 },
 ];
 
+function buildDailyExpenses(items, days = 7, weekOffset = 0) {
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  today.setDate(today.getDate() - weekOffset * 7);
+  const slots = Array.from({ length: days }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (days - 1 - i));
+    return { label: d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }), dayNum: d.getDate(), day: d.toISOString().slice(0, 10), depenses: 0 };
+  });
+  const byDay = Object.fromEntries(slots.map(s => [s.day, s]));
+  for (const it of items) {
+    const d = (it.createdAt || "").slice(0, 10);
+    if (d && byDay[d]) byDay[d].depenses += parseFloat(it.prixAchat) || 0;
+  }
+  return slots;
+}
+
+function buildWeeklyExpenses(items, numWeeks = 13) {
+  const today = new Date();
+  const dow = (today.getDay() + 6) % 7;
+  const slots = Array.from({ length: numWeeks }, (_, i) => {
+    const start = new Date(today);
+    start.setDate(today.getDate() - dow - (numWeeks - 1 - i) * 7);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23, 59, 59, 999);
+    return { label: `S${isoWeek(start)}`, start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10), depenses: 0 };
+  });
+  for (const it of items) {
+    const d = (it.createdAt || "").slice(0, 10);
+    if (d) { const sl = slots.find(s => d >= s.start && d <= s.end); if (sl) sl.depenses += parseFloat(it.prixAchat) || 0; }
+  }
+  return slots;
+}
+
+function buildMonthlyExpenses(items, numMonths = 12) {
+  const today = new Date();
+  const slots = Array.from({ length: numMonths }, (_, i) => {
+    const d = new Date(today.getFullYear(), today.getMonth() - (numMonths - 1 - i), 1);
+    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { label: d.toLocaleDateString("fr-FR", { month: "short" }).replace(".", ""), start: d.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10), depenses: 0 };
+  });
+  for (const it of items) {
+    const d = (it.createdAt || "").slice(0, 10);
+    if (d) { const sl = slots.find(s => d >= s.start && d <= s.end); if (sl) sl.depenses += parseFloat(it.prixAchat) || 0; }
+  }
+  return slots;
+}
+
+function buildExpensesSlots(items, period, weekOffset = 0) {
+  if (period.type === "week") return buildWeeklyExpenses(items, period.count);
+  if (period.type === "month") return buildMonthlyExpenses(items, period.count);
+  return buildDailyExpenses(items, period.count, weekOffset);
+}
+
+const AMBER = "#E0912F", AMBER_DK = "#B0651B";
+
+function DepensesChart({ items }) {
+  const [periodIdx, setPeriodIdx] = useState(0);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const touchStartX = useRef(null);
+
+  const period = PERIODS[periodIdx];
+  const is7j = period.type === "day";
+  const slots = buildExpensesSlots(items, period, weekOffset);
+  const currentWeekNum = is7j ? isoWeek(new Date(Date.now() - weekOffset * 7 * 86400000)) : null;
+
+  const H = 120;
+  const maxDep = Math.max(1, ...slots.map(s => s.depenses));
+  const total = slots.reduce((s, d) => s + d.depenses, 0);
+  const bestIdx = slots.reduce((b, d, i, a) => (d.depenses > a[b].depenses ? i : b), 0);
+  const barGap = period.type === "day" && period.count <= 7 ? 6 : period.type === "day" ? 1 : 2;
+  const labelStep = period.type === "month" ? 1 : period.type === "week" ? 2 : period.count <= 7 ? 1 : 5;
+  const getAxisLabel = (s) => {
+    if (period.type === "month" || period.type === "week") return s.label;
+    return period.count > 7 ? String(s.dayNum) : s.label.split(" ")[0];
+  };
+
+  return (
+    <div className="section-card" style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+        <span className="psection-label">
+          Dépenses · {period.label}{is7j ? ` · S${currentWeekNum}` : ""}
+        </span>
+        <div style={{ display: "flex", gap: 4 }}>
+          {is7j && (
+            <>
+              <button onClick={() => setWeekOffset(o => o + 1)} style={{ padding: "3px 8px", borderRadius: 20, border: `1.5px solid ${C.border}`, background: "#fff", color: C.muted2, fontSize: 12, cursor: "pointer" }}>‹</button>
+              <button onClick={() => setWeekOffset(o => Math.max(0, o - 1))} disabled={weekOffset === 0} style={{ padding: "3px 8px", borderRadius: 20, border: `1.5px solid ${weekOffset === 0 ? C.divider : C.border}`, background: "#fff", color: weekOffset === 0 ? C.divider : C.muted2, fontSize: 12, cursor: weekOffset === 0 ? "default" : "pointer" }}>›</button>
+            </>
+          )}
+          {PERIODS.map((p, i) => (
+            <button key={p.label} onClick={() => { setPeriodIdx(i); setWeekOffset(0); }} style={{
+              padding: "3px 9px", borderRadius: 20, border: "1.5px solid",
+              borderColor: i === periodIdx ? C.ink : C.border,
+              background: i === periodIdx ? C.ink : "#fff",
+              color: i === periodIdx ? "#fff" : C.muted2,
+              fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: F.body,
+            }}>{p.label}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <span style={{ fontFamily: F.title, fontWeight: 800, fontSize: 24, color: C.ink, letterSpacing: "-.01em" }}>{Math.round(total)} €</span>
+      </div>
+
+      <div style={{ overflow: "hidden" }}
+        onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchEnd={e => {
+          if (touchStartX.current === null || !is7j) return;
+          const dx = e.changedTouches[0].clientX - touchStartX.current;
+          if (Math.abs(dx) > 40) { if (dx < 0) setWeekOffset(o => o + 1); else if (weekOffset > 0) setWeekOffset(o => o - 1); }
+          touchStartX.current = null;
+        }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: barGap, height: H + 44 }}>
+          {slots.map((s, i) => {
+            const h = s.depenses > 0 ? Math.max(14, Math.round((s.depenses / maxDep) * H)) : 0;
+            const best = i === bestIdx && s.depenses > 0;
+            const showLabel = i === bestIdx || i % labelStep === 0 || i === slots.length - 1;
+            const key = s.start || s.day || i;
+            return (
+              <div key={key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%", justifyContent: "flex-end", gap: 4, minWidth: 0 }}>
+                <span style={{ height: 17 }} />
+                {s.depenses > 0
+                  ? <div style={{ width: "100%", height: h, borderRadius: 6, background: `linear-gradient(180deg, #F5B96A, ${AMBER})`, boxShadow: best ? "0 6px 14px rgba(224,145,47,.28)" : "none" }} />
+                  : <div style={{ width: "100%", height: 4, borderRadius: 4, background: "#F5E8D4" }} />}
+                {s.depenses > 0
+                  ? <span style={{ fontFamily: F.title, fontWeight: 800, fontSize: best ? 11 : 10, color: AMBER_DK, whiteSpace: "nowrap" }}>{s.depenses.toFixed(0)}€</span>
+                  : <span style={{ fontFamily: F.body, fontWeight: 600, fontSize: 10, color: "#C8BCA8" }}>–</span>}
+                <span style={{ fontFamily: F.body, fontWeight: best ? 700 : 600, fontSize: 9, color: best ? C.ink : C.muted2, visibility: showLabel ? "visible" : "hidden", whiteSpace: "nowrap" }}>
+                  {getAxisLabel(s)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ActivityChart({ items }) {
   const defaultIdx = useMemo(() => {
     for (let i = PERIODS.length - 1; i >= 0; i--) {
@@ -516,6 +656,12 @@ export function StatsTab({ items }) {
       </div>
 
       <ActivityChart items={scoped} />
+
+      {/* Trésorerie */}
+      <div style={{ padding: "4px 0 10px", fontFamily: F.title, fontWeight: 700, fontSize: 13, color: C.muted2, textTransform: "uppercase", letterSpacing: ".06em" }}>
+        Trésorerie
+      </div>
+      <DepensesChart items={scoped} />
 
       {/* Répartition par source */}
       {bySource.length > 0 && (
