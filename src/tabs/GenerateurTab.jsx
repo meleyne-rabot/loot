@@ -49,12 +49,14 @@ const fieldBox = { background: C.surface, border: `1.5px solid ${C.border}`, bor
 const card = { background: C.surface, borderRadius: 16, padding: "14px 15px", boxShadow: SHADOW.card, boxSizing: "border-box" };
 
 // ─── CopyButton (miroir de la référence) ────────────────────────────────────
-function CopyButton({ text }) {
+function CopyButton({ text, onCopy }) {
   const [done, setDone] = useState(false);
   const copy = async () => {
     try { await navigator.clipboard.writeText(text); }
     catch { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
-    setDone(true); setTimeout(() => setDone(false), 1600);
+    setDone(true);
+    onCopy?.();
+    setTimeout(() => setDone(false), 1600);
   };
   return (
     <button onClick={copy} style={{
@@ -122,14 +124,58 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
   const [desc, setDesc] = useState("");
   const [prixListe, setPrixListe] = useState("");
   const [refine, setRefine] = useState("");
+  const [pendingAutoSave, setPendingAutoSave] = useState(false);
 
   const fileRef = useRef();
   const camRef = useRef();
+  const titleCopiedRef = useRef(false);
+  const descCopiedRef = useRef(false);
+  const savedRef = useRef(false);
+  const autoSaveTimerRef = useRef(null);
 
   useEffect(() => {
     listMalles(user.id).then(setMalles).catch(() => {});
     findOrCreateMonPlacard(user.id).then(setSource).catch(() => {});
   }, [user.id]);
+
+  // Auto-save : déclenché par le timer quand titre + desc copiés, sans save manuelle
+  useEffect(() => {
+    if (!pendingAutoSave) return;
+    setPendingAutoSave(false);
+    if (savedRef.current) return;
+    savedRef.current = true;
+    (async () => {
+      try {
+        let thumb = null;
+        if (images[0]?.url) thumb = await compressImage(images[0].url);
+        const categories = await listCategories(user.id).catch(() => []);
+        const category = matchCategoryByName(categories, result?.categorie);
+        const tagIds = category ? [category.id] : [];
+        if (result?.vintage) {
+          const v = await findOrCreateVintage(categories, user.id).catch(() => null);
+          if (v && !tagIds.includes(v.id)) tagIds.push(v.id);
+        }
+        const malle = malles.find(m => m.id === malleId) || null;
+        await onSave(
+          {
+            name: titre, source: source?.nom || "", sourceId: source?.id || null,
+            tagIds, description: desc,
+            hashtags: (result?.hashtags || []).map(h => h.replace(/^#/, "")),
+            prixAchat, prixAffiche: prixListe, prixRecommande: String(result?.prix_recommande ?? ""),
+            prixVente: "", statut: "en-vente", plateformes: [plateforme],
+            categorie: result?.categorie || "autre", image: thumb,
+            commissionPct: source?.commissionPct || 0,
+            malleId: pour === "malle" ? malleId || null : null,
+            malleCommissionPct: malle?.commissionPct ?? 0,
+          },
+          source?.type,
+          { stayOnPage: true }
+        );
+        showToast("✓ Auto-enregistré · Complète le prix dans l'inventaire");
+        reset();
+      } catch { /* silent — l'utilisateur peut sauvegarder manuellement */ }
+    })();
+  }, [pendingAutoSave]);
 
   useEffect(() => {
     if (goBackRef) goBackRef.current = () => {
@@ -154,6 +200,11 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
   async function generer(hint = "", plat = plateforme) {
     if (!images.length) return;
     setGenerating(true); setError("");
+    // reset tracking pour cette nouvelle génération
+    titleCopiedRef.current = false;
+    descCopiedRef.current = false;
+    savedRef.current = false;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     try {
       const calibNote = await getPriceCalibrationNote(user.id);
       const prefs = loadPrefs(user.id);
@@ -166,6 +217,12 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
       setRefine("");
       setPhase("result");
       window.scrollTo(0, 0);
+      // Lance le timer d'auto-save à 60s
+      autoSaveTimerRef.current = setTimeout(() => {
+        if (titleCopiedRef.current && descCopiedRef.current && !savedRef.current) {
+          setPendingAutoSave(true);
+        }
+      }, 60 * 1000);
     } catch { setError("Erreur de génération. Réessaie."); }
     setGenerating(false);
   }
@@ -176,15 +233,20 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
   }
 
   const reset = () => {
+    if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
+    titleCopiedRef.current = false; descCopiedRef.current = false; savedRef.current = false;
     setPhase("saisie"); setImages([]); setInfos(""); setPrixAchat("");
     setResult(null); setTitre(""); setDesc(""); setPrixListe("");
     setRefine(""); setError(""); setPour("stock"); setMalleId(null); setPlateforme("vinted");
+    setPendingAutoSave(false);
     if (fileRef.current) fileRef.current.value = "";
     if (camRef.current) camRef.current.value = "";
     window.scrollTo(0, 0);
   };
 
   const save = async () => {
+    savedRef.current = true; // annule l'auto-save
+    if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
     setError("");
     try {
       let thumb = null;
@@ -378,7 +440,7 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
       <div style={{ ...card, marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
           <span style={lbl}>Titre</span>
-          <CopyButton text={titre} />
+          <CopyButton text={titre} onCopy={() => { titleCopiedRef.current = true; }} />
         </div>
         <textarea value={titre} onChange={(e) => setTitre(e.target.value)} rows={2}
           style={{ width: "100%", border: "none", resize: "vertical", outline: "none",
@@ -392,7 +454,7 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
       <div style={{ ...card, marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
           <span style={lbl}>Description{plateforme === "vinted" ? " (hashtags inclus)" : ""}</span>
-          <CopyButton text={desc} />
+          <CopyButton text={desc} onCopy={() => { descCopiedRef.current = true; }} />
         </div>
         <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={6}
           style={{ width: "100%", border: "none", resize: "vertical", outline: "none",
