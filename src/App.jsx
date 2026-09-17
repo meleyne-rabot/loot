@@ -252,6 +252,7 @@ export default function App() {
     const created = await createItem(item, user.id, sourceType);
     setItems((prev) => [created, ...prev]);
     if (!stayOnPage) setTab("inventaire");
+    return created;
   };
   const upd = async (u, sourceType) => {
     const updated = await updateItem(u, user.id, sourceType);
@@ -318,7 +319,7 @@ export default function App() {
         <p className="page-subtitle">{current?.subtitle}</p>
       </div>
 
-      {tab === "generer"    && <GenerateurTab onSave={add} onPhaseChange={setGenPhase} goBackRef={genGoBackRef} />}
+      {tab === "generer"    && <GenerateurTab onSave={add} onUpdate={upd} onPhaseChange={setGenPhase} goBackRef={genGoBackRef} />}
       {tab === "inventaire" && <InventaireTab items={items} onUpdate={upd} onDelete={del} onItemPatched={itemPatched} onGoToGenerer={() => setTab("generer")} onOpenDetail={setDetailItem} />}
       {tab === "stats"      && <StatsTab items={items} />}
       {tab === "malles"     && <MallesTab />}

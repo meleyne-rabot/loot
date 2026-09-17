@@ -103,7 +103,7 @@ function getDesc(result, platform) {
 }
 
 // ─── composant principal ─────────────────────────────────────────────────────
-export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceSettings }) {
+export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOpenAnnonceSettings }) {
   const { user } = useAuth();
   const { showToast } = useToast();
 
@@ -124,26 +124,23 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
   const [desc, setDesc] = useState("");
   const [prixListe, setPrixListe] = useState("");
   const [refine, setRefine] = useState("");
-  const [pendingAutoSave, setPendingAutoSave] = useState(false);
+  const [autoSavedId, setAutoSavedId] = useState(null); // id de l'item auto-sauvegardé
+  const [copyStatus, setCopyStatus] = useState({ title: false, desc: false });
 
   const fileRef = useRef();
   const camRef = useRef();
-  const titleCopiedRef = useRef(false);
-  const descCopiedRef = useRef(false);
-  const savedRef = useRef(false);
-  const autoSaveTimerRef = useRef(null);
+  const autoSavingRef = useRef(false); // garde-fou contre double déclenchement
 
   useEffect(() => {
     listMalles(user.id).then(setMalles).catch(() => {});
     findOrCreateMonPlacard(user.id).then(setSource).catch(() => {});
   }, [user.id]);
 
-  // Auto-save : déclenché par le timer quand titre + desc copiés, sans save manuelle
+  // Auto-save immédiat dès que titre ET description ont été copiés
   useEffect(() => {
-    if (!pendingAutoSave) return;
-    setPendingAutoSave(false);
-    if (savedRef.current) return;
-    savedRef.current = true;
+    if (!copyStatus.title || !copyStatus.desc) return;
+    if (autoSavedId || autoSavingRef.current) return; // déjà sauvegardé
+    autoSavingRef.current = true;
     (async () => {
       try {
         let thumb = null;
@@ -156,7 +153,7 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
           if (v && !tagIds.includes(v.id)) tagIds.push(v.id);
         }
         const malle = malles.find(m => m.id === malleId) || null;
-        await onSave(
+        const created = await onSave(
           {
             name: titre, source: source?.nom || "", sourceId: source?.id || null,
             tagIds, description: desc,
@@ -171,11 +168,14 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
           source?.type,
           { stayOnPage: true }
         );
-        showToast("✓ Auto-enregistré · Complète le prix dans l'inventaire");
-        reset();
-      } catch { /* silent — l'utilisateur peut sauvegarder manuellement */ }
+        setAutoSavedId(created?.id || true);
+        showToast("✓ Enregistré · Entre le prix Vinted ci-dessous");
+      } catch (err) {
+        autoSavingRef.current = false;
+        showToast("✗ Enregistrement échoué : " + (err?.message || "erreur inconnue"));
+      }
     })();
-  }, [pendingAutoSave]);
+  }, [copyStatus]);
 
   useEffect(() => {
     if (goBackRef) goBackRef.current = () => {
@@ -200,11 +200,9 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
   async function generer(hint = "", plat = plateforme) {
     if (!images.length) return;
     setGenerating(true); setError("");
-    // reset tracking pour cette nouvelle génération
-    titleCopiedRef.current = false;
-    descCopiedRef.current = false;
-    savedRef.current = false;
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    setCopyStatus({ title: false, desc: false });
+    setAutoSavedId(null);
+    autoSavingRef.current = false;
     try {
       const calibNote = await getPriceCalibrationNote(user.id);
       const prefs = loadPrefs(user.id);
@@ -217,12 +215,6 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
       setRefine("");
       setPhase("result");
       window.scrollTo(0, 0);
-      // Lance le timer d'auto-save à 60s
-      autoSaveTimerRef.current = setTimeout(() => {
-        if (titleCopiedRef.current && descCopiedRef.current && !savedRef.current) {
-          setPendingAutoSave(true);
-        }
-      }, 60 * 1000);
     } catch { setError("Erreur de génération. Réessaie."); }
     setGenerating(false);
   }
@@ -233,48 +225,51 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
   }
 
   const reset = () => {
-    if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
-    titleCopiedRef.current = false; descCopiedRef.current = false; savedRef.current = false;
+    autoSavingRef.current = false;
+    setAutoSavedId(null);
+    setCopyStatus({ title: false, desc: false });
     setPhase("saisie"); setImages([]); setInfos(""); setPrixAchat("");
     setResult(null); setTitre(""); setDesc(""); setPrixListe("");
     setRefine(""); setError(""); setPour("stock"); setMalleId(null); setPlateforme("vinted");
-    setPendingAutoSave(false);
     if (fileRef.current) fileRef.current.value = "";
     if (camRef.current) camRef.current.value = "";
     window.scrollTo(0, 0);
   };
 
   const save = async () => {
-    savedRef.current = true; // annule l'auto-save
-    if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
     setError("");
     try {
-      let thumb = null;
-      if (images[0]?.url) thumb = await compressImage(images[0].url);
-      const categories = await listCategories(user.id).catch(() => []);
-      const category = matchCategoryByName(categories, result?.categorie);
-      const tagIds = category ? [category.id] : [];
-      if (result?.vintage) {
-        const v = await findOrCreateVintage(categories, user.id).catch(() => null);
-        if (v && !tagIds.includes(v.id)) tagIds.push(v.id);
-      }
       const malle = malles.find((m) => m.id === malleId) || null;
-      await onSave(
-        {
-          name: titre, source: source?.nom || "", sourceId: source?.id || null,
-          tagIds, description: desc,
-          hashtags: (result?.hashtags || []).map((h) => h.replace(/^#/, "")),
-          prixAchat, prixAffiche: prixListe, prixRecommande: String(result?.prix_recommande ?? ""),
-          prixVente: "", statut: "en-vente", plateformes: [plateforme],
-          categorie: result?.categorie || "autre", image: thumb,
-          commissionPct: source?.commissionPct || 0,
-          malleId: pour === "malle" ? malleId || null : null,
-          malleCommissionPct: malle?.commissionPct ?? 0,
-        },
-        source?.type,
-        { stayOnPage: true }
-      );
-      showToast("✓ Article ajouté à l'inventaire");
+      const itemData = {
+        name: titre, source: source?.nom || "", sourceId: source?.id || null,
+        description: desc,
+        hashtags: (result?.hashtags || []).map((h) => h.replace(/^#/, "")),
+        prixAchat, prixAffiche: prixListe, prixRecommande: String(result?.prix_recommande ?? ""),
+        prixVente: "", statut: "en-vente", plateformes: [plateforme],
+        categorie: result?.categorie || "autre",
+        commissionPct: source?.commissionPct || 0,
+        malleId: pour === "malle" ? malleId || null : null,
+        malleCommissionPct: malle?.commissionPct ?? 0,
+      };
+
+      if (autoSavedId && autoSavedId !== true && onUpdate) {
+        // Article déjà auto-sauvegardé — on met à jour le prix et la description
+        await onUpdate({ ...itemData, id: autoSavedId }, source?.type);
+        showToast("✓ Prix mis à jour dans l'inventaire");
+      } else if (!autoSavedId) {
+        // Pas encore sauvegardé — création classique
+        let thumb = null;
+        if (images[0]?.url) thumb = await compressImage(images[0].url);
+        const categories = await listCategories(user.id).catch(() => []);
+        const category = matchCategoryByName(categories, result?.categorie);
+        const tagIds = category ? [category.id] : [];
+        if (result?.vintage) {
+          const v = await findOrCreateVintage(categories, user.id).catch(() => null);
+          if (v && !tagIds.includes(v.id)) tagIds.push(v.id);
+        }
+        await onSave({ ...itemData, tagIds, image: thumb }, source?.type, { stayOnPage: true });
+        showToast("✓ Article ajouté à l'inventaire");
+      }
       reset();
     } catch (err) { setError(err?.message || "Erreur de sauvegarde. Réessaie."); }
   };
@@ -440,7 +435,7 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
       <div style={{ ...card, marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
           <span style={lbl}>Titre</span>
-          <CopyButton text={titre} onCopy={() => { titleCopiedRef.current = true; }} />
+          <CopyButton text={titre} onCopy={() => setCopyStatus(s => ({ ...s, title: true }))} />
         </div>
         <textarea value={titre} onChange={(e) => setTitre(e.target.value)} rows={2}
           style={{ width: "100%", border: "none", resize: "vertical", outline: "none",
@@ -454,7 +449,7 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
       <div style={{ ...card, marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
           <span style={lbl}>Description{plateforme === "vinted" ? " (hashtags inclus)" : ""}</span>
-          <CopyButton text={desc} onCopy={() => { descCopiedRef.current = true; }} />
+          <CopyButton text={desc} onCopy={() => setCopyStatus(s => ({ ...s, desc: true }))} />
         </div>
         <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={6}
           style={{ width: "100%", border: "none", resize: "vertical", outline: "none",
@@ -515,10 +510,12 @@ export function GenerateurTab({ onSave, onPhaseChange, goBackRef, onOpenAnnonceS
       {/* enregistrer au prix réellement listé */}
       <div style={{ ...card, marginTop: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 11 }}>
-          <CheckCircle size={19} color={C.ink} />
+          <CheckCircle size={19} color={autoSavedId ? C.green : C.ink} />
           <span style={{ font: `500 12.5px/1.4 ${F.body}`, color: "#4A4860" }}>
-            Après avoir collé sur {plateforme === "vinted" ? "Vinted" : "LeBonCoin"}, enregistre au{" "}
-            <b style={{ color: C.ink }}>prix réellement listé</b>.
+            {autoSavedId
+              ? <><b style={{ color: C.greenDark }}>Enregistré ✓</b> · Entre le prix réel et valide.</>
+              : <>Après avoir collé sur {plateforme === "vinted" ? "Vinted" : "LeBonCoin"}, enregistre au{" "}<b style={{ color: C.ink }}>prix réellement listé</b>.</>
+            }
           </span>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
