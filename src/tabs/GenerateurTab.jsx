@@ -125,57 +125,61 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
   const [prixListe, setPrixListe] = useState("");
   const [refine, setRefine] = useState("");
   const [autoSavedId, setAutoSavedId] = useState(null); // id de l'item auto-sauvegardé
-  const [copyStatus, setCopyStatus] = useState({ title: false, desc: false });
 
   const fileRef = useRef();
   const camRef = useRef();
   const autoSavingRef = useRef(false); // garde-fou contre double déclenchement
+  const titleCopiedRef = useRef(false);
+  const descCopiedRef = useRef(false);
+  // Refs toujours à jour pour l'auto-save (évite les stale closures)
+  const liveRef = useRef({});
+  liveRef.current = { images, titre, desc, result, user, malles, malleId, source, prixAchat, prixListe, plateforme, pour, onSave };
 
   useEffect(() => {
     listMalles(user.id).then(setMalles).catch(() => {});
     findOrCreateMonPlacard(user.id).then(setSource).catch(() => {});
   }, [user.id]);
 
-  // Auto-save immédiat dès que titre ET description ont été copiés
-  useEffect(() => {
-    if (!copyStatus.title || !copyStatus.desc) return;
-    if (autoSavedId || autoSavingRef.current) return; // déjà sauvegardé
+  // triggerAutoSave — appelé directement dans onCopy, utilise liveRef pour éviter les stale closures
+  const triggerAutoSave = async () => {
+    if (autoSavingRef.current) return;
     autoSavingRef.current = true;
-    (async () => {
-      try {
-        let thumb = null;
-        if (images[0]?.url) thumb = await compressImage(images[0].url);
-        const categories = await listCategories(user.id).catch(() => []);
-        const category = matchCategoryByName(categories, result?.categorie);
-        const tagIds = category ? [category.id] : [];
-        if (result?.vintage) {
-          const v = await findOrCreateVintage(categories, user.id).catch(() => null);
-          if (v && !tagIds.includes(v.id)) tagIds.push(v.id);
-        }
-        const malle = malles.find(m => m.id === malleId) || null;
-        const created = await onSave(
-          {
-            name: titre, source: source?.nom || "", sourceId: source?.id || null,
-            tagIds, description: desc,
-            hashtags: (result?.hashtags || []).map(h => h.replace(/^#/, "")),
-            prixAchat, prixAffiche: prixListe, prixRecommande: String(result?.prix_recommande ?? ""),
-            prixVente: "", statut: "en-vente", plateformes: [plateforme],
-            categorie: result?.categorie || "autre", image: thumb,
-            commissionPct: source?.commissionPct || 0,
-            malleId: pour === "malle" ? malleId || null : null,
-            malleCommissionPct: malle?.commissionPct ?? 0,
-          },
-          source?.type,
-          { stayOnPage: true }
-        );
-        setAutoSavedId(created?.id || true);
-        showToast("✓ Enregistré · Entre le prix Vinted ci-dessous");
-      } catch (err) {
-        autoSavingRef.current = false;
-        showToast("✗ Enregistrement échoué : " + (err?.message || "erreur inconnue"));
+    const { images: imgs, titre: t, desc: d, result: r, user: u, malles: ms,
+            malleId: mid, source: src, prixAchat: pa, prixListe: pl,
+            plateforme: plat, pour: p, onSave: save } = liveRef.current;
+    try {
+      let thumb = null;
+      if (imgs[0]?.url) thumb = await compressImage(imgs[0].url);
+      const categories = await listCategories(u.id).catch(() => []);
+      const category = matchCategoryByName(categories, r?.categorie);
+      const tagIds = category ? [category.id] : [];
+      if (r?.vintage) {
+        const v = await findOrCreateVintage(categories, u.id).catch(() => null);
+        if (v && !tagIds.includes(v.id)) tagIds.push(v.id);
       }
-    })();
-  }, [copyStatus]);
+      const malle = ms.find(m => m.id === mid) || null;
+      const created = await save(
+        {
+          name: t, source: src?.nom || "", sourceId: src?.id || null,
+          tagIds, description: d,
+          hashtags: (r?.hashtags || []).map(h => h.replace(/^#/, "")),
+          prixAchat: pa, prixAffiche: pl, prixRecommande: String(r?.prix_recommande ?? ""),
+          prixVente: "", statut: "en-vente", plateformes: [plat],
+          categorie: r?.categorie || "autre", image: thumb,
+          commissionPct: src?.commissionPct || 0,
+          malleId: p === "malle" ? mid || null : null,
+          malleCommissionPct: malle?.commissionPct ?? 0,
+        },
+        src?.type,
+        { stayOnPage: true }
+      );
+      setAutoSavedId(created?.id || true);
+      showToast("✓ Enregistré · Entre le prix Vinted ci-dessous");
+    } catch (err) {
+      autoSavingRef.current = false;
+      showToast("✗ Enregistrement échoué : " + (err?.message || "erreur inconnue"));
+    }
+  };
 
   useEffect(() => {
     if (goBackRef) goBackRef.current = () => {
@@ -200,7 +204,8 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
   async function generer(hint = "", plat = plateforme) {
     if (!images.length) return;
     setGenerating(true); setError("");
-    setCopyStatus({ title: false, desc: false });
+    titleCopiedRef.current = false;
+    descCopiedRef.current = false;
     setAutoSavedId(null);
     autoSavingRef.current = false;
     try {
@@ -226,8 +231,9 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
 
   const reset = () => {
     autoSavingRef.current = false;
+    titleCopiedRef.current = false;
+    descCopiedRef.current = false;
     setAutoSavedId(null);
-    setCopyStatus({ title: false, desc: false });
     setPhase("saisie"); setImages([]); setInfos(""); setPrixAchat("");
     setResult(null); setTitre(""); setDesc(""); setPrixListe("");
     setRefine(""); setError(""); setPour("stock"); setMalleId(null); setPlateforme("vinted");
@@ -435,7 +441,7 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
       <div style={{ ...card, marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
           <span style={lbl}>Titre</span>
-          <CopyButton text={titre} onCopy={() => setCopyStatus(s => ({ ...s, title: true }))} />
+          <CopyButton text={titre} onCopy={() => { titleCopiedRef.current = true; if (descCopiedRef.current) triggerAutoSave(); }} />
         </div>
         <textarea value={titre} onChange={(e) => setTitre(e.target.value)} rows={2}
           style={{ width: "100%", border: "none", resize: "vertical", outline: "none",
@@ -449,7 +455,7 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
       <div style={{ ...card, marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
           <span style={lbl}>Description{plateforme === "vinted" ? " (hashtags inclus)" : ""}</span>
-          <CopyButton text={desc} onCopy={() => setCopyStatus(s => ({ ...s, desc: true }))} />
+          <CopyButton text={desc} onCopy={() => { descCopiedRef.current = true; if (titleCopiedRef.current) triggerAutoSave(); }} />
         </div>
         <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={6}
           style={{ width: "100%", border: "none", resize: "vertical", outline: "none",
