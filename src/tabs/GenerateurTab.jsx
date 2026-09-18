@@ -260,7 +260,10 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
 
       if (autoSavedId && autoSavedId !== true && onUpdate) {
         // Article déjà auto-sauvegardé — on met à jour le prix et la description
-        await onUpdate({ ...itemData, id: autoSavedId }, source?.type);
+        // Ne pas repasser image: undefined (écrase la vignette) — on l'omet volontairement
+        let thumb = null;
+        if (images[0]?.url) thumb = await compressImage(images[0].url);
+        await onUpdate({ ...itemData, id: autoSavedId, ...(thumb ? { image: thumb } : {}) }, source?.type);
         showToast("✓ Prix mis à jour dans l'inventaire");
       } else if (!autoSavedId) {
         // Pas encore sauvegardé — création classique
