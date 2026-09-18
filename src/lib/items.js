@@ -102,9 +102,12 @@ export async function createItem(item, userId, sourceType) {
 }
 
 export async function updateItem(item, userId, sourceType) {
+  const row = toRow(item, userId, sourceType);
+  // Ne pas écraser l'image si elle n'est pas explicitement fournie
+  if (item.image === undefined) delete row.image;
   const { data, error } = await supabase
     .from("items")
-    .update(toRow(item, userId, sourceType))
+    .update(row)
     .eq("id", item.id)
     .eq("user_id", userId)
     .select()
