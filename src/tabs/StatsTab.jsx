@@ -5,7 +5,7 @@ import { listCategories } from "../lib/categories";
 import { listMalles } from "../lib/malles";
 import {
   CurrencyEur, CheckCircle, Lightning, ShoppingBag,
-  Package, Wallet, TrendUp, Timer, Hourglass, Tag, PlusCircle,
+  Package, Wallet, TrendUp, Timer, Hourglass, Tag, PlusCircle, Archive,
 } from "@phosphor-icons/react";
 import { C, F } from "../lib/loot-tokens";
 
@@ -473,6 +473,90 @@ function ActivityChart({ items }) {
 }
 
 
+const GREEN = "#2FA96A";
+const GREEN_DK = "#1E8A57";
+
+function StockValueChart({ items }) {
+  // Graphe cumulatif global : investi (prixAchat) vs valeur stock (prixAffiche)
+  // On trie tous les articles par createdAt et on cumule dans le temps
+  const sorted = [...items]
+    .filter(i => i.createdAt && (parseFloat(i.prixAchat) > 0 || parseFloat(i.prixAffiche) > 0))
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  if (sorted.length === 0) return null;
+
+  // On réduit à max 60 points pour la lisibilité
+  const stride = Math.max(1, Math.ceil(sorted.length / 60));
+  const points = [];
+  let cumInvesti = 0, cumValeur = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    const it = sorted[i];
+    cumInvesti += parseFloat(it.prixAchat) || 0;
+    cumValeur  += parseFloat(it.prixAffiche) || 0;
+    if (i % stride === 0 || i === sorted.length - 1) {
+      points.push({ i, cumInvesti, cumValeur, date: it.createdAt.slice(0, 10) });
+    }
+  }
+
+  const maxVal = Math.max(1, ...points.map(p => p.cumValeur));
+  const W = 320, H = 100;
+  const px = (idx) => (idx / (points.length - 1)) * W;
+  const py = (v) => H - (v / maxVal) * H;
+
+  const polyValeur  = points.map((p, i) => `${px(i)},${py(p.cumValeur)}`).join(" ");
+  const polyInvesti = points.map((p, i) => `${px(i)},${py(p.cumInvesti)}`).join(" ");
+  const areaValeur  = `${px(0)},${H} ` + polyValeur + ` ${px(points.length - 1)},${H}`;
+  const areaInvesti = `${px(0)},${H} ` + polyInvesti + ` ${px(points.length - 1)},${H}`;
+
+  const last = points[points.length - 1];
+  const ecart = last.cumValeur - last.cumInvesti;
+  const ecartPct = last.cumInvesti > 0 ? Math.round((ecart / last.cumInvesti) * 100) : null;
+
+  return (
+    <div className="section-card" style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+        <span className="psection-label">Stock · investi vs valeur</span>
+      </div>
+      <div style={{ display: "flex", gap: 14, marginBottom: 14, alignItems: "flex-end" }}>
+        <div>
+          <div style={{ fontFamily: F.title, fontWeight: 800, fontSize: 22, color: GREEN_DK, letterSpacing: "-.01em" }}>{Math.round(last.cumValeur)} €</div>
+          <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 11, color: C.muted2 }}>valeur stock</div>
+        </div>
+        <div>
+          <div style={{ fontFamily: F.title, fontWeight: 800, fontSize: 17, color: AMBER_DK, letterSpacing: "-.01em" }}>{Math.round(last.cumInvesti)} €</div>
+          <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 11, color: C.muted2 }}>investi</div>
+        </div>
+        {ecartPct !== null && (
+          <div style={{ marginLeft: "auto" }}>
+            <div style={{ fontFamily: F.title, fontWeight: 800, fontSize: 17, color: ecart >= 0 ? GREEN_DK : C.coral }}>×{(last.cumValeur / Math.max(1, last.cumInvesti)).toFixed(1)}</div>
+            <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 11, color: C.muted2 }}>ratio</div>
+          </div>
+        )}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", overflow: "visible" }}>
+        <defs>
+          <linearGradient id="gv" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={GREEN} stopOpacity="0.22" /><stop offset="100%" stopColor={GREEN} stopOpacity="0" /></linearGradient>
+          <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={AMBER} stopOpacity="0.18" /><stop offset="100%" stopColor={AMBER} stopOpacity="0" /></linearGradient>
+        </defs>
+        <polygon points={areaValeur}  fill="url(#gv)" />
+        <polygon points={areaInvesti} fill="url(#gi)" />
+        <polyline points={polyValeur}  fill="none" stroke={GREEN} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        <polyline points={polyInvesti} fill="none" stroke={AMBER} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" strokeDasharray="4 3" />
+      </svg>
+      <div style={{ display: "flex", gap: 14, marginTop: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 18, height: 2, background: GREEN, display: "inline-block", borderRadius: 1 }} />
+          <span style={{ fontFamily: F.body, fontWeight: 500, fontSize: 11, color: C.muted2 }}>Valeur stock</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 18, height: 0, borderTop: `2px dashed ${AMBER}`, display: "inline-block" }} />
+          <span style={{ fontFamily: F.body, fontWeight: 500, fontSize: 11, color: C.muted2 }}>Investi</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MetricCard({ icon, value, label, iconColor }) {
   return (
     <div className="metric-card">
@@ -527,6 +611,9 @@ export function StatsTab({ items }) {
     .filter((i) => sourceFilter === "tout" || i.sourceId === sourceFilter)
     .filter((i) => tagFilter.length === 0 || tagFilter.every((id) => (i.tagIds || []).includes(id)))
     .filter((i) => malleFilter === "tout" || (malleFilter === "moi" ? !i.malleId : i.malleId === malleFilter));
+
+  const enVenteAll = scoped.filter(i => i.statut === "en-vente");
+  const valeurStock = enVenteAll.reduce((s, i) => s + (parseFloat(i.prixAffiche) || 0), 0);
 
   const { vendus: vendusAll, tv: tvAll, marge: margeAll, roi: roiAll, withReco, avgEcartPct } = computeStats(scoped);
   const vendus = cutoff ? vendusAll.filter((i) => ((i.venduAt || i.createdAt) || "").slice(0, 10) >= cutoff) : vendusAll;
@@ -653,6 +740,7 @@ export function StatsTab({ items }) {
         {avgStockAge !== null && (
           <MetricCard icon={<Hourglass size={17} weight="fill" />} value={avgStockAge + " j"} label="Âge moyen du stock" iconColor="var(--amber)" />
         )}
+        <MetricCard icon={<Archive size={17} weight="fill" />} value={Math.round(valeurStock) + " €"} label="Valeur stock en vente" iconColor={GREEN_DK} />
       </div>
 
       <ActivityChart items={scoped} />
@@ -662,6 +750,7 @@ export function StatsTab({ items }) {
         Trésorerie
       </div>
       <DepensesChart items={scoped} />
+      <StockValueChart items={scoped} />
 
       {/* Répartition par source */}
       {bySource.length > 0 && (
