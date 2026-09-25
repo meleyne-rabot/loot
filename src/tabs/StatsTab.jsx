@@ -280,7 +280,7 @@ function buildStockSlots(items, period, weekOffset = 0) {
   return slots;
 }
 
-function DepensesStockChart({ items }) {
+function PeriodBarChart({ items, getValue, color, gradientTop, emptyColor, title, totalLabel }) {
   const [periodIdx, setPeriodIdx] = useState(0);
   const [weekOffset, setWeekOffset] = useState(0);
   const touchStartX = useRef(null);
@@ -288,17 +288,16 @@ function DepensesStockChart({ items }) {
   const period = PERIODS[periodIdx];
   const is7j = period.type === "day";
   const currentWeekNum = is7j ? isoWeek(new Date(Date.now() - weekOffset * 7 * 86400000)) : null;
-
-  const depSlots  = buildExpensesSlots(items, period, weekOffset);
-  const stockSlots = buildStockSlots(items, period, weekOffset);
-  // Fusionner pour avoir depenses + valeur dans chaque slot
-  const slots = depSlots.map((s, i) => ({ ...s, valeur: stockSlots[i]?.valeur || 0 }));
+  const slots = getValue === "depenses"
+    ? buildExpensesSlots(items, period, weekOffset)
+    : buildStockSlots(items, period, weekOffset);
+  const field = getValue === "depenses" ? "depenses" : "valeur";
 
   const H = 120;
-  const maxVal = Math.max(1, ...slots.map(s => Math.max(s.depenses, s.valeur)));
-  const totalDep   = slots.reduce((s, d) => s + d.depenses, 0);
-  const totalStock = slots.reduce((s, d) => s + d.valeur, 0);
-  const barGap = period.type === "day" && period.count <= 7 ? 4 : period.type === "day" ? 1 : 2;
+  const maxV = Math.max(1, ...slots.map(s => s[field]));
+  const total = slots.reduce((s, d) => s + d[field], 0);
+  const bestIdx = slots.reduce((b, d, i, a) => (d[field] > a[b][field] ? i : b), 0);
+  const barGap = period.type === "day" && period.count <= 7 ? 6 : period.type === "day" ? 1 : 2;
   const labelStep = period.type === "month" ? 1 : period.type === "week" ? 2 : period.count <= 7 ? 1 : 5;
   const getAxisLabel = (s) => {
     if (period.type === "month" || period.type === "week") return s.label;
@@ -307,10 +306,8 @@ function DepensesStockChart({ items }) {
 
   return (
     <div className="section-card" style={{ marginBottom: 14 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <span className="psection-label">
-          Dépenses vs Stock · {period.label}{is7j ? ` · S${currentWeekNum}` : ""}
-        </span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+        <span className="psection-label">{title} · {period.label}{is7j ? ` · S${currentWeekNum}` : ""}</span>
         <div style={{ display: "flex", gap: 4 }}>
           {is7j && (
             <>
@@ -329,18 +326,10 @@ function DepensesStockChart({ items }) {
           ))}
         </div>
       </div>
-      {/* Totaux période */}
-      <div style={{ display: "flex", gap: 18, marginBottom: 14 }}>
-        <div>
-          <div style={{ fontFamily: F.title, fontWeight: 800, fontSize: 20, color: AMBER_DK, letterSpacing: "-.01em" }}>{Math.round(totalDep)} €</div>
-          <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 11, color: C.muted2 }}>dépensé</div>
-        </div>
-        <div>
-          <div style={{ fontFamily: F.title, fontWeight: 800, fontSize: 20, color: GREEN_DK, letterSpacing: "-.01em" }}>{Math.round(totalStock)} €</div>
-          <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 11, color: C.muted2 }}>stock ajouté</div>
-        </div>
+      <div style={{ marginBottom: 16 }}>
+        <span style={{ fontFamily: F.title, fontWeight: 800, fontSize: 24, color: C.ink, letterSpacing: "-.01em" }}>{Math.round(total)} €</span>
+        <span style={{ fontFamily: F.body, fontWeight: 500, fontSize: 12, color: C.muted2, marginLeft: 6 }}>{totalLabel}</span>
       </div>
-
       <div style={{ overflow: "hidden" }}
         onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
         onTouchEnd={e => {
@@ -349,36 +338,28 @@ function DepensesStockChart({ items }) {
           if (Math.abs(dx) > 40) { if (dx < 0) setWeekOffset(o => o + 1); else if (weekOffset > 0) setWeekOffset(o => o - 1); }
           touchStartX.current = null;
         }}>
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: barGap, height: H + 26 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: barGap, height: H + 44 }}>
           {slots.map((s, i) => {
-            const hDep   = s.depenses > 0 ? Math.max(6, Math.round((s.depenses / maxVal) * H)) : 0;
-            const hStock = s.valeur   > 0 ? Math.max(6, Math.round((s.valeur   / maxVal) * H)) : 0;
-            const showLabel = i % labelStep === 0 || i === slots.length - 1;
+            const v = s[field];
+            const h = v > 0 ? Math.max(14, Math.round((v / maxV) * H)) : 0;
+            const best = i === bestIdx && v > 0;
+            const showLabel = i === bestIdx || i % labelStep === 0 || i === slots.length - 1;
             const key = s.start || s.day || i;
             return (
-              <div key={key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%", justifyContent: "flex-end", gap: 3, minWidth: 0 }}>
-                {/* barres groupées */}
-                <div style={{ display: "flex", gap: 1, alignItems: "flex-end", width: "100%" }}>
-                  <div style={{ flex: 1, height: hDep > 0 ? hDep : 4, borderRadius: 4, background: hDep > 0 ? `linear-gradient(180deg,#F5B96A,${AMBER})` : "#F5E8D4" }} />
-                  <div style={{ flex: 1, height: hStock > 0 ? hStock : 4, borderRadius: 4, background: hStock > 0 ? `linear-gradient(180deg,#5DD49A,${GREEN})` : "#D8F2E6" }} />
-                </div>
-                <span style={{ fontFamily: F.body, fontWeight: 600, fontSize: 9, color: C.muted2, visibility: showLabel ? "visible" : "hidden", whiteSpace: "nowrap" }}>
+              <div key={key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%", justifyContent: "flex-end", gap: 4, minWidth: 0 }}>
+                <span style={{ height: 17 }} />
+                {v > 0
+                  ? <div style={{ width: "100%", height: h, borderRadius: 6, background: `linear-gradient(180deg,${gradientTop},${color})`, boxShadow: best ? `0 6px 14px ${color}44` : "none" }} />
+                  : <div style={{ width: "100%", height: 4, borderRadius: 4, background: emptyColor }} />}
+                {v > 0
+                  ? <span style={{ fontFamily: F.title, fontWeight: 800, fontSize: best ? 11 : 10, color, whiteSpace: "nowrap" }}>{v.toFixed(0)}€</span>
+                  : <span style={{ fontFamily: F.body, fontWeight: 600, fontSize: 10, color: C.muted3 }}>–</span>}
+                <span style={{ fontFamily: F.body, fontWeight: best ? 700 : 600, fontSize: 9, color: best ? C.ink : C.muted2, visibility: showLabel ? "visible" : "hidden", whiteSpace: "nowrap" }}>
                   {getAxisLabel(s)}
                 </span>
               </div>
             );
           })}
-        </div>
-      </div>
-      {/* Légende */}
-      <div style={{ display: "flex", gap: 14, marginTop: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 3, background: AMBER, display: "inline-block" }} />
-          <span style={{ fontFamily: F.body, fontWeight: 500, fontSize: 11, color: C.muted2 }}>Dépenses</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 10, height: 10, borderRadius: 3, background: GREEN, display: "inline-block" }} />
-          <span style={{ fontFamily: F.body, fontWeight: 500, fontSize: 11, color: C.muted2 }}>Stock ajouté</span>
         </div>
       </div>
     </div>
@@ -805,7 +786,8 @@ export function StatsTab({ items }) {
       <div style={{ padding: "4px 0 10px", fontFamily: F.title, fontWeight: 700, fontSize: 13, color: C.muted2, textTransform: "uppercase", letterSpacing: ".06em" }}>
         Dépenses
       </div>
-      <DepensesStockChart items={scoped} />
+      <PeriodBarChart items={scoped} getValue="depenses" color={AMBER_DK} gradientTop="#F5B96A" emptyColor="#F5E8D4" title="Dépenses" totalLabel="sur la période" />
+      <PeriodBarChart items={scoped} getValue="valeur" color={GREEN_DK} gradientTop="#5DD49A" emptyColor="#D8F2E6" title="Stock ajouté" totalLabel="valeur affichée" />
       <StockValueChart items={scoped} />
 
       {/* Répartition par source */}
