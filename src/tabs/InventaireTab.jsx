@@ -83,6 +83,12 @@ function Card({ item, sourcesById, mallesById, onMarkSold, onOpen }) {
             <StatutBadge statut={item.statut} />
             <span style={{ font: `700 10.5px ${F.body}`, color: C.vinted, background: C.vintedTint,
               padding: "3px 8px", borderRadius: 999 }}>{platLabel}</span>
+            {item.malleId && mallesById?.[item.malleId] && (
+              <span style={{ font: `700 10.5px ${F.body}`, color: "#7A5C1E",
+                background: "#FEF3C7", padding: "3px 8px", borderRadius: 999 }}>
+                🧳 {mallesById[item.malleId].nom}
+              </span>
+            )}
             {item.source && (
               <span style={{ font: `600 10.5px ${F.body}`, color: C.muted2 }}>{item.source}</span>
             )}
@@ -100,8 +106,8 @@ function Card({ item, sourcesById, mallesById, onMarkSold, onOpen }) {
               <span style={{ marginLeft: "auto", font: `800 12.5px ${F.body}`,
                 color: margin >= 0 ? C.greenDark : C.coral,
                 background: margin >= 0 ? C.greenSoft : C.coralTint,
-                padding: "4px 10px", borderRadius: 999 }}>
-                {margin >= 0 ? "+" : ""}{margin} €
+                padding: "4px 10px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 }}>
+                {margin >= 0 ? "+" : ""}{Number.isInteger(margin) ? margin : margin.toFixed(2).replace(/\.?0+$/, "")} €
               </span>
             ) : null}
           </div>
