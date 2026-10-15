@@ -124,7 +124,8 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
   const [desc, setDesc] = useState("");
   const [prixListe, setPrixListe] = useState("");
   const [refine, setRefine] = useState("");
-  const [autoSavedId, setAutoSavedId] = useState(null); // id de l'item auto-sauvegardé
+  const [autoSavedId, setAutoSavedId] = useState(null); // pour l'affichage UI uniquement
+  const autoSavedIdRef = useRef(null); // source de vérité pour save() — synchrone, pas de délai React
 
   const fileRef = useRef();
   const camRef = useRef();
@@ -173,7 +174,9 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
         src?.type,
         { stayOnPage: true }
       );
-      setAutoSavedId(created?.id || true);
+      const createdId = created?.id || null;
+      autoSavedIdRef.current = createdId;
+      setAutoSavedId(createdId || true); // true = auto-sauvegardé mais id perdu
       showToast("✓ Enregistré · Entre le prix Vinted ci-dessous");
     } catch (err) {
       autoSavingRef.current = false;
@@ -233,6 +236,7 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
     autoSavingRef.current = false;
     titleCopiedRef.current = false;
     descCopiedRef.current = false;
+    autoSavedIdRef.current = null;
     setAutoSavedId(null);
     setPhase("saisie"); setImages([]); setInfos(""); setPrixAchat("");
     setResult(null); setTitre(""); setDesc(""); setPrixListe("");
@@ -258,14 +262,15 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
         malleCommissionPct: malle?.commissionPct ?? 0,
       };
 
-      if (autoSavedId && autoSavedId !== true && onUpdate) {
+      // Utilise le ref (synchrone) pour éviter le délai de batch React sur autoSavedId state
+      const savedId = autoSavedIdRef.current;
+      if (savedId && onUpdate) {
         // Article déjà auto-sauvegardé — on met à jour le prix et la description
-        // Ne pas repasser image: undefined (écrase la vignette) — on l'omet volontairement
         let thumb = null;
         if (images[0]?.url) thumb = await compressImage(images[0].url);
-        await onUpdate({ ...itemData, id: autoSavedId, ...(thumb ? { image: thumb } : {}) }, source?.type);
+        await onUpdate({ ...itemData, id: savedId, ...(thumb ? { image: thumb } : {}) }, source?.type);
         showToast("✓ Prix mis à jour dans l'inventaire");
-      } else if (!autoSavedId) {
+      } else if (!savedId) {
         // Pas encore sauvegardé — création classique
         let thumb = null;
         if (images[0]?.url) thumb = await compressImage(images[0].url);
