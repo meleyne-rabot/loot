@@ -5,7 +5,7 @@ import { listCategories } from "../lib/categories";
 import { listMalles } from "../lib/malles";
 import {
   CurrencyEur, CheckCircle, Lightning, ShoppingBag,
-  Package, Wallet, TrendUp, Timer, Hourglass, Tag, PlusCircle, Archive,
+  Package, Wallet, TrendUp, Timer, Hourglass, Tag, PlusCircle, Archive, ChartLineUp,
 } from "@phosphor-icons/react";
 import { C, F } from "../lib/loot-tokens";
 
@@ -586,6 +586,124 @@ function StockValueChart({ items }) {
   );
 }
 
+function pearson(xs, ys) {
+  const n = xs.length;
+  if (n < 2) return 0;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  const num = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0);
+  const den = Math.sqrt(xs.reduce((s, x) => s + (x - mx) ** 2, 0) * ys.reduce((s, y) => s + (y - my) ** 2, 0));
+  return den === 0 ? 0 : num / den;
+}
+
+function computeCorrelation(items) {
+  // Construit un dictionnaire jour → { ajouts, ventes }
+  const byDay = {};
+  for (const it of items) {
+    if (!it.createdAt) continue;
+    const d = it.createdAt.slice(0, 10);
+    if (!byDay[d]) byDay[d] = { ajouts: 0, ventes: 0 };
+    byDay[d].ajouts++;
+  }
+  for (const it of items) {
+    if (it.statut !== "vendu" || it.reversePaye) continue;
+    const d = (it.venduAt || it.createdAt || "").slice(0, 10);
+    if (!d) continue;
+    if (!byDay[d]) byDay[d] = { ajouts: 0, ventes: 0 };
+    byDay[d].ventes++;
+  }
+
+  const days = Object.keys(byDay).sort();
+  if (days.length < 14) return null; // pas assez de données
+
+  const ajouts = days.map(d => byDay[d].ajouts);
+  const ventes = days.map(d => byDay[d].ventes);
+
+  // Corrélation à différents lags (0 à 4 jours)
+  const lags = [0, 1, 2, 3, 4];
+  const cors = lags.map(k => {
+    const xs = ajouts.slice(0, days.length - k);
+    const ys = ventes.slice(k);
+    return { lag: k, r: pearson(xs, ys) };
+  });
+
+  const best = cors.reduce((b, c) => c.r > b.r ? c : b, cors[0]);
+
+  // Ratio pratique : à lag optimal, combien d'ajouts par vente ?
+  const totalAjouts = ajouts.slice(0, days.length - best.lag).reduce((s, v) => s + v, 0);
+  const totalVentes = ventes.slice(best.lag).reduce((s, v) => s + v, 0);
+  const ratio = totalVentes > 0 ? Math.round((totalAjouts / totalVentes) * 10) / 10 : null;
+
+  return { cors, best, ratio, days: days.length };
+}
+
+function CorrelationCard({ items }) {
+  const data = useMemo(() => computeCorrelation(items), [items]);
+  if (!data) return null;
+
+  const { best, cors, ratio } = data;
+  const pct = Math.round(best.r * 100);
+  const lagLabel = best.lag === 0 ? "le même jour" : best.lag === 1 ? "le lendemain" : `J+${best.lag}`;
+  const strength = pct >= 60 ? "forte" : pct >= 35 ? "modérée" : "faible";
+  const strengthColor = pct >= 60 ? GREEN_DK : pct >= 35 ? AMBER_DK : C.muted2;
+
+  return (
+    <div className="section-card" style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <ChartLineUp size={16} weight="fill" color={VIOLET} />
+        <span className="psection-label">Corrélation ajouts → ventes</span>
+      </div>
+
+      {/* Stat principale */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 14 }}>
+        <div>
+          <div style={{ fontFamily: F.title, fontWeight: 800, fontSize: 32, color: strengthColor, letterSpacing: "-.02em", lineHeight: 1 }}>
+            {pct}%
+          </div>
+          <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 12, color: C.muted2, marginTop: 3 }}>
+            corrélation {strength}
+          </div>
+        </div>
+        <div style={{ marginBottom: 4 }}>
+          <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 13, color: C.ink }}>
+            Pic de ventes <b style={{ color: strengthColor }}>{lagLabel}</b>
+          </div>
+          {ratio !== null && (
+            <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 12, color: C.muted2, marginTop: 2 }}>
+              ~{ratio} publication{ratio > 1 ? "s" : ""} → 1 vente
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mini-barres des corrélations par lag */}
+      <div style={{ display: "flex", gap: 6, alignItems: "flex-end", marginBottom: 10 }}>
+        {cors.map(({ lag, r }) => {
+          const pctLag = Math.round(r * 100);
+          const isBest = lag === best.lag;
+          const h = Math.max(6, Math.round(Math.max(0, r) * 48));
+          return (
+            <div key={lag} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+              <span style={{ fontFamily: F.title, fontWeight: 800, fontSize: 10, color: isBest ? strengthColor : C.muted3 }}>
+                {pctLag}%
+              </span>
+              <div style={{ width: "100%", height: h, borderRadius: 4,
+                background: isBest ? `linear-gradient(180deg,${isBest && pct >= 60 ? "#5DD49A" : isBest ? "#F5B96A" : "#D4D2E0"},${isBest ? strengthColor : C.muted3})` : C.divider }} />
+              <span style={{ fontFamily: F.body, fontSize: 9, color: isBest ? C.ink : C.muted3, fontWeight: isBest ? 700 : 500 }}>
+                {lag === 0 ? "J" : `J+${lag}`}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <p style={{ fontSize: 11, color: C.muted2, lineHeight: 1.5, margin: 0 }}>
+        Calculé sur {data.days} jours d'historique. Publier déclenche des ventes — pas forcément des articles publiés.
+      </p>
+    </div>
+  );
+}
+
 function MetricCard({ icon, value, label, iconColor }) {
   return (
     <div className="metric-card">
@@ -835,6 +953,8 @@ export function StatsTab({ items }) {
           ))}
         </div>
       )}
+
+      <CorrelationCard items={scoped} />
 
       {/* Calibration prix */}
       {(avgEcartPct !== null || avgVentePct !== null) && (
