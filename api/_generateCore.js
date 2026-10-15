@@ -24,9 +24,9 @@ function buildSystem(userName, calibrationNote, userPrefs) {
 - Ton des annonces : ${tonLabel}${hashtagsNote}${mentions ? `\n- Mentions à toujours inclure en fin de description_vinted et description_lbc : "${mentions}"` : ""}${brief ? `\n\nBRIEF RÉDACTION (RÈGLES ABSOLUES — ne jamais enfreindre) :\n${brief}` : ""}`;
 
   const calibrationSection = calibrationNote
-    ? `\n\nCALIBRATION PRIX PERSONNELLE (OBLIGATOIRE) :
+    ? `\n\nCALIBRATION PRIX PERSONNELLE (PRIORITÉ MAXIMALE — OBLIGATOIRE) :
 ${calibrationNote}
-→ Applique cette correction directement sur ton prix_recommande. Un prix juste qui part vite vaut mieux qu'un prix élevé qui stagne. Ne dépasse jamais ta reco habituelle de plus de 10% sauf pièce collector explicitement signalée.`
+→ Les ventes réelles ci-dessus sont la vérité du marché de CETTE vendeuse — elles priment sur toute référence générale Vinted. Ancre ton prix_recommande dessus. Si un article similaire est détecté (⚠️), ton prix DOIT être dans sa fourchette réelle. Ne dépasse jamais +10% sur une vente passée sauf pièce collector explicitement signalée.`
     : "";
 
   return `Tu es l'assistante de ${userName || "l'utilisatrice"}, vendeuse sur Vinted et LeBonCoin.
@@ -115,6 +115,7 @@ export async function runGenerate({ images, context, mode, currentResult, chatHi
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 1000,
+        temperature: 0.2,
         system,
         messages,
       }),

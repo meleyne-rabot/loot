@@ -78,16 +78,67 @@ const chip = () => ({
 });
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-async function getPriceCalibrationNote(userId) {
+async function getPriceCalibrationNote(userId, contextHint = "") {
   try {
     const items = await listItems(userId);
-    const withReco = items.filter((i) => parseFloat(i.prixRecommande) > 0 && parseFloat(i.prixAffiche) > 0);
-    if (withReco.length < 3) return "";
-    const avg = Math.round(
-      withReco.reduce((s, i) => s + ((parseFloat(i.prixAffiche) - parseFloat(i.prixRecommande)) / parseFloat(i.prixRecommande)) * 100, 0) / withReco.length
-    );
-    if (Math.abs(avg) < 3) return "";
-    return `L'utilisatrice liste en moyenne à ${avg >= 0 ? "+" : ""}${avg}% vs tes recos (${withReco.length} articles). Baisse ton prix_recommande de ${Math.abs(avg)}% par rapport à ta valeur marché habituelle.`;
+    const parts = [];
+
+    // 1. Ajustement par catégorie (reco IA → prix réellement listé)
+    const cats = {};
+    for (const i of items) {
+      const cat = i.categorie || "autre";
+      const reco = parseFloat(i.prixRecommande);
+      const affiche = parseFloat(i.prixAffiche);
+      if (reco > 0 && affiche > 0) {
+        if (!cats[cat]) cats[cat] = { sum: 0, count: 0 };
+        cats[cat].sum += ((affiche - reco) / reco) * 100;
+        cats[cat].count++;
+      }
+    }
+    const catLines = Object.entries(cats)
+      .filter(([, v]) => v.count >= 2)
+      .map(([cat, v]) => {
+        const avg = Math.round(v.sum / v.count);
+        if (Math.abs(avg) < 3) return null;
+        return `- ${cat} : ${avg >= 0 ? "+" : ""}${avg}% (${v.count} articles)`;
+      })
+      .filter(Boolean);
+    if (catLines.length > 0) {
+      parts.push(`Ajustement par catégorie (reco IA → prix réel listé) :\n${catLines.join("\n")}`);
+    }
+
+    // 2. Dernières ventes réelles (ancres de prix concrètes)
+    const vendus = items
+      .filter((i) => i.statut === "vendu" && parseFloat(i.prixVente) > 0 && i.name)
+      .sort((a, b) => new Date(b.venduAt || b.createdAt) - new Date(a.venduAt || a.createdAt))
+      .slice(0, 20);
+    if (vendus.length > 0) {
+      const lines = vendus.map((i) => {
+        const nom = i.name.length > 50 ? i.name.slice(0, 47) + "…" : i.name;
+        const vendu = parseFloat(i.prixVente).toFixed(0);
+        const affiche = parseFloat(i.prixAffiche) > 0 ? ` (listé ${parseFloat(i.prixAffiche).toFixed(0)}€)` : "";
+        return `- ${nom} → vendu ${vendu}€${affiche}`;
+      });
+      parts.push(`Ventes réelles récentes (ancres de prix — utilise-les pour calibrer) :\n${lines.join("\n")}`);
+    }
+
+    // 3. Détection doublon : matching sur les mots du contexte vs noms vendus
+    if (contextHint && vendus.length > 0) {
+      const words = contextHint.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
+      const scored = vendus.map((i) => {
+        const nameWords = i.name.toLowerCase().split(/\W+/);
+        const overlap = words.filter((w) => nameWords.some((nw) => nw.includes(w) || w.includes(nw))).length;
+        return { i, score: overlap };
+      }).filter((x) => x.score >= 2).sort((a, b) => b.score - a.score).slice(0, 2);
+      if (scored.length > 0) {
+        const matchLines = scored.map(({ i }) =>
+          `"${i.name}" vendu ${parseFloat(i.prixVente).toFixed(0)}€${parseFloat(i.prixAffiche) > 0 ? ` (listé ${parseFloat(i.prixAffiche).toFixed(0)}€)` : ""}`
+        );
+        parts.push(`⚠️ Article similaire déjà vendu par cette utilisatrice : ${matchLines.join(" / ")}. ANCRE ton prix_recommande sur ces valeurs réelles — c'est son vrai marché.`);
+      }
+    }
+
+    return parts.join("\n\n");
   } catch { return ""; }
 }
 
@@ -212,9 +263,9 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
     setAutoSavedId(null);
     autoSavingRef.current = false;
     try {
-      const calibNote = await getPriceCalibrationNote(user.id);
-      const prefs = loadPrefs(user.id);
       const ctx = [infos, hint ? `Précision : ${hint}` : ""].filter(Boolean).join("\n\n");
+      const calibNote = await getPriceCalibrationNote(user.id, ctx);
+      const prefs = loadPrefs(user.id);
       const r = await callAI(images, ctx, user?.user_metadata?.full_name, calibNote, prefs);
       setResult(r);
       setTitre(r.titre || "");
