@@ -122,6 +122,35 @@ async function getPriceCalibrationNote(userId, contextHint = "") {
       parts.push(`Ventes réelles récentes (ancres de prix — utilise-les pour calibrer) :\n${lines.join("\n")}`);
     }
 
+    // 3. Marge de négociation habituelle (listé → vendu réel)
+    const vendusWithBoth = items.filter(
+      (i) => i.statut === "vendu" && parseFloat(i.prixVente) > 0 && parseFloat(i.prixAffiche) > 0
+    );
+    if (vendusWithBoth.length >= 3) {
+      // Global
+      const globalNego = Math.round(
+        vendusWithBoth.reduce((s, i) => s + ((parseFloat(i.prixVente) - parseFloat(i.prixAffiche)) / parseFloat(i.prixAffiche)) * 100, 0) / vendusWithBoth.length
+      );
+      // Par catégorie (si ≥3 vendus avec les deux prix)
+      const negoCats = {};
+      for (const i of vendusWithBoth) {
+        const cat = i.categorie || "autre";
+        if (!negoCats[cat]) negoCats[cat] = { sum: 0, count: 0 };
+        negoCats[cat].sum += ((parseFloat(i.prixVente) - parseFloat(i.prixAffiche)) / parseFloat(i.prixAffiche)) * 100;
+        negoCats[cat].count++;
+      }
+      const negoLines = Object.entries(negoCats)
+        .filter(([, v]) => v.count >= 3)
+        .map(([cat, v]) => `- ${cat} : ${Math.round(v.sum / v.count)}% (${v.count} ventes)`)
+        .join("\n");
+      const negoNote = negoLines
+        ? `Global : ${globalNego}%\n${negoLines}`
+        : `${globalNego}% en moyenne (${vendusWithBoth.length} ventes)`;
+      parts.push(
+        `Marge de négociation habituelle (prix listé → prix vendu réel) :\n${negoNote}\n→ Si la négo est de -X%, liste X% au-dessus du prix cible pour tomber juste après négo. Intègre cette marge dans ton prix_recommande.`
+      );
+    }
+
     // 3. Détection doublon : matching sur les mots du contexte vs noms vendus
     if (contextHint && vendus.length > 0) {
       const words = contextHint.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
