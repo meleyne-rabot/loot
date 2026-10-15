@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { listMalles } from "../lib/malles";
+import { LootSelect } from "./LootSelect";
 
 export function MalleSelect({ value, onChange }) {
   const { user } = useAuth();
@@ -12,19 +13,15 @@ export function MalleSelect({ value, onChange }) {
 
   if (malles.length === 0) return null;
 
+  const options = [
+    { value: "", label: "Mes articles perso" },
+    ...malles.map((m) => ({ value: m.id, label: m.nom })),
+  ];
+
   return (
     <div className="field">
       <label className="label">Malle</label>
-      <select
-        className="select"
-        value={value || ""}
-        onChange={(e) => onChange(e.target.value || null)}
-      >
-        <option value="">Mes articles perso</option>
-        {malles.map((m) => (
-          <option key={m.id} value={m.id}>{m.nom}</option>
-        ))}
-      </select>
+      <LootSelect value={value || ""} onChange={(v) => onChange(v || null)} options={options} placeholder="Mes articles perso" />
     </div>
   );
 }

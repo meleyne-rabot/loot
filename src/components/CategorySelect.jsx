@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { listCategories, createCategory } from "../lib/categories";
+import { LootSelect } from "./LootSelect";
 
 const ADD_NEW = "__add_new__";
 
-// value: id de la catégorie sélectionnée. onChange reçoit l'objet {id, nom}.
 export function CategorySelect({ value, onChange }) {
   const { user } = useAuth();
   const [categories, setCategories] = useState([]);
@@ -14,8 +14,7 @@ export function CategorySelect({ value, onChange }) {
     listCategories(user.id).then(setCategories).catch(() => {});
   }, [user]);
 
-  const handleChange = async (e) => {
-    const v = e.target.value;
+  const handleChange = async (v) => {
     if (v === ADD_NEW) {
       const nom = window.prompt("Nom de la nouvelle catégorie (ex: Jouets, Déco…)");
       if (!nom || !nom.trim()) return;
@@ -28,13 +27,11 @@ export function CategorySelect({ value, onChange }) {
     onChange(selected);
   };
 
-  return (
-    <select className="select" value={value || ""} onChange={handleChange}>
-      <option value="">— Catégorie —</option>
-      {categories.map((c) => (
-        <option key={c.id} value={c.id}>{c.nom}</option>
-      ))}
-      <option value={ADD_NEW}>+ Ajouter une catégorie…</option>
-    </select>
-  );
+  const options = [
+    { value: "", label: "— Catégorie —" },
+    ...categories.map((c) => ({ value: c.id, label: c.nom })),
+    { value: ADD_NEW, label: "+ Ajouter une catégorie…" },
+  ];
+
+  return <LootSelect value={value || ""} onChange={handleChange} options={options} placeholder="— Catégorie —" />;
 }

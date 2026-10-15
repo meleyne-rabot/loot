@@ -8,6 +8,7 @@ import {
   Package, Wallet, TrendUp, Timer, Hourglass, Tag, PlusCircle, Archive, ChartLineUp,
 } from "@phosphor-icons/react";
 import { C, F } from "../lib/loot-tokens";
+import { LootSelect } from "../components/LootSelect";
 
 function netRevenue(i) {
   const prixVente = parseFloat(i.prixVente) || 0;
@@ -832,16 +833,18 @@ export function StatsTab({ items }) {
       {/* Filtres */}
       <div className="filters">
         {malles.length > 0 && (
-          <select className={"select-pill" + (malleFilter !== "tout" ? " active" : "")} value={malleFilter} onChange={(e) => setMalleFilter(e.target.value)}>
-            <option value="tout">Toutes les malles</option>
-            <option value="moi">Mes articles</option>
-            {malles.map((m) => <option key={m.id} value={m.id}>{m.nom}</option>)}
-          </select>
+          <LootSelect pill active={malleFilter !== "tout"} value={malleFilter} onChange={setMalleFilter}
+            options={[
+              { value: "tout", label: "Toutes les malles" },
+              { value: "moi", label: "Mes articles" },
+              ...malles.map((m) => ({ value: m.id, label: m.nom })),
+            ]} />
         )}
-        <select className={"select-pill" + (sourceFilter !== "tout" ? " active" : "")} value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
-          <option value="tout">Toutes sources</option>
-          {sources.map((s) => <option key={s.id} value={s.id}>{s.nom}</option>)}
-        </select>
+        <LootSelect pill active={sourceFilter !== "tout"} value={sourceFilter} onChange={setSourceFilter}
+          options={[
+            { value: "tout", label: "Toutes sources" },
+            ...sources.map((s) => ({ value: s.id, label: s.nom })),
+          ]} />
         <div className="tag-dropdown" ref={tagMenuRef}>
           <button type="button" className={"select-pill" + (tagFilter.length > 0 ? " active" : "")} onClick={() => setTagMenuOpen((v) => !v)}>
             {tagFilter.length > 0 ? `Tags (${tagFilter.length})` : "Tags"}

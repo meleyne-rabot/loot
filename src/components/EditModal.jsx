@@ -10,6 +10,7 @@ import { CopyBtn } from "./CopyBtn";
 import { InfoBubble } from "./InfoBubble";
 import { MalleSelect } from "./MalleSelect";
 import { listMalles } from "../lib/malles";
+import { LootSelect } from "./LootSelect";
 
 export function EditModal({ item, onSave, onClose, onDelete }) {
   const { user } = useAuth();
@@ -118,11 +119,12 @@ export function EditModal({ item, onSave, onClose, onDelete }) {
           </div>
           <div className="field">
             <label className="label">Statut</label>
-            <select className="select" value={f.statut || "en-attente"} onChange={(e) => s("statut", e.target.value)}>
-              <option value="en-attente">En attente</option>
-              <option value="en-vente">En vente</option>
-              <option value="vendu">Vendu</option>
-            </select>
+            <LootSelect value={f.statut || "en-attente"} onChange={(v) => s("statut", v)}
+              options={[
+                { value: "en-attente", label: "En attente" },
+                { value: "en-vente",   label: "En vente" },
+                { value: "vendu",      label: "Vendu" },
+              ]} />
           </div>
         </div>
         <div className="row">

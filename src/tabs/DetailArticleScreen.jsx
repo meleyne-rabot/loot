@@ -7,6 +7,7 @@ import { useToast } from "../context/ToastContext";
 import { callAI } from "../lib/ai";
 import { listMalles } from "../lib/malles";
 import { SourceSelect } from "../components/SourceSelect";
+import { LootSelect } from "../components/LootSelect";
 import { TagSelect } from "../components/TagSelect";
 import {
   ArrowLeft, Check, Copy, ArrowClockwise, Lightbulb, Trash, Package, X, MagnifyingGlass,
@@ -511,15 +512,11 @@ export function DetailArticleScreen({ item, onBack, onSave, onDelete, allItems =
             {malles.length > 0 && (
               <div style={{ marginTop: 12 }}>
                 <div style={{ ...lbl, marginBottom: 7 }}>Malle</div>
-                <select value={malleId || ""} onChange={e => setMalleId(e.target.value || null)}
-                  style={{ ...field, width: "100%", font: `600 13px ${F.body}`, color: C.ink,
-                    outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none",
-                    paddingRight: 36,
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A879B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: 16 }}>
-                  <option value="">Mes articles perso</option>
-                  {malles.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
-                </select>
+                <LootSelect value={malleId || ""} onChange={(v) => setMalleId(v || null)}
+                  options={[
+                    { value: "", label: "Mes articles perso" },
+                    ...malles.map(m => ({ value: m.id, label: m.nom })),
+                  ]} />
               </div>
             )}
 

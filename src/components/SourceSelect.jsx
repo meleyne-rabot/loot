@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { listSources, createSource } from "../lib/sources";
+import { LootSelect } from "./LootSelect";
+import { C, F } from "../lib/loot-tokens";
 
 const ADD_NEW = "__add_new__";
 
-// value: id de la source sélectionnée. onChange reçoit l'objet source complet
-// {id, nom, type, commissionPct} (ou null si désélection).
 export function SourceSelect({ value, onChange }) {
   const { user } = useAuth();
   const [sources, setSources] = useState([]);
@@ -17,12 +17,8 @@ export function SourceSelect({ value, onChange }) {
     listSources(user.id).then(setSources).catch(() => {});
   }, [user]);
 
-  const handleChange = (e) => {
-    const v = e.target.value;
-    if (v === ADD_NEW) {
-      setAdding(true);
-      return;
-    }
+  const handleChange = (v) => {
+    if (v === ADD_NEW) { setAdding(true); return; }
     const selected = sources.find((s) => s.id === v) || null;
     onChange(selected);
   };
@@ -51,14 +47,11 @@ export function SourceSelect({ value, onChange }) {
     );
   }
 
-  return (
-    <select className="select" value={value || ""} onChange={handleChange}
-      style={{ fontWeight: 600 }}>
-      <option value="">— Source —</option>
-      {sources.map((s) => (
-        <option key={s.id} value={s.id}>{s.nom}</option>
-      ))}
-      <option value={ADD_NEW}>+ Ajouter une source…</option>
-    </select>
-  );
+  const options = [
+    { value: "", label: "— Source —" },
+    ...sources.map((s) => ({ value: s.id, label: s.nom })),
+    { value: ADD_NEW, label: "+ Ajouter une source…" },
+  ];
+
+  return <LootSelect value={value || ""} onChange={handleChange} options={options} placeholder="— Source —" />;
 }
