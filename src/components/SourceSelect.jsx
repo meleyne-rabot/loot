@@ -52,7 +52,8 @@ export function SourceSelect({ value, onChange }) {
   }
 
   return (
-    <select className="select" value={value || ""} onChange={handleChange}>
+    <select className="select" value={value || ""} onChange={handleChange}
+      style={{ fontWeight: 600 }}>
       <option value="">— Source —</option>
       {sources.map((s) => (
         <option key={s.id} value={s.id}>{s.nom}</option>

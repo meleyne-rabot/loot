@@ -465,13 +465,23 @@ export function DetailArticleScreen({ item, onBack, onSave, onDelete, allItems =
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16 }}>
               <div>
                 <div style={{ ...lbl, marginBottom: 7 }}>Statut</div>
-                <select value={statut} onChange={e => setStatut(e.target.value)}
-                  style={{ ...field, width: "100%", font: `600 13px ${F.body}`, color: C.ink,
-                    outline: "none", cursor: "pointer" }}>
-                  <option value="en-attente">En attente</option>
-                  <option value="en-vente">En vente</option>
-                  <option value="vendu">Vendu</option>
-                </select>
+                <div style={{ display: "flex", gap: 5 }}>
+                  {[
+                    { v: "en-attente", label: "Attente", color: C.amberText, bg: C.amberTint, border: C.amber },
+                    { v: "en-vente",   label: "En vente", color: C.greenDark, bg: C.greenTint, border: C.green },
+                    { v: "vendu",      label: "Vendu",    color: C.coralPressed, bg: C.coralTint, border: C.coral },
+                  ].map(({ v, label, color, bg, border }) => {
+                    const on = statut === v;
+                    return (
+                      <button key={v} onClick={() => setStatut(v)} style={{ flex: 1, textAlign: "center",
+                        font: `700 11px ${F.body}`, borderRadius: 12, padding: "12px 2px", cursor: "pointer",
+                        color: on ? color : C.muted3, background: on ? bg : "#fff",
+                        border: `1.5px solid ${on ? border : C.border}` }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div>
                 <div style={{ ...lbl, marginBottom: 7 }}>Plateforme</div>
@@ -503,7 +513,10 @@ export function DetailArticleScreen({ item, onBack, onSave, onDelete, allItems =
                 <div style={{ ...lbl, marginBottom: 7 }}>Malle</div>
                 <select value={malleId || ""} onChange={e => setMalleId(e.target.value || null)}
                   style={{ ...field, width: "100%", font: `600 13px ${F.body}`, color: C.ink,
-                    outline: "none", cursor: "pointer" }}>
+                    outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none",
+                    paddingRight: 36,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A879B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", backgroundSize: 16 }}>
                   <option value="">Mes articles perso</option>
                   {malles.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
                 </select>

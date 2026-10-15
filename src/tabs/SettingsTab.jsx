@@ -288,7 +288,10 @@ function TagsSection({ user }) {
                 <select
                   value={mergeTarget[c.id] || ""}
                   onChange={(e) => setMergeTarget((p) => ({ ...p, [c.id]: e.target.value }))}
-                  style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "4px 8px", font: `400 11px ${F.body}`, background: "#fff" }}
+                  style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "4px 24px 4px 8px", font: `400 11px ${F.body}`, background: "#fff",
+                    appearance: "none", WebkitAppearance: "none",
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A879B' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat", backgroundPosition: "right 6px center", backgroundSize: 13, cursor: "pointer" }}
                 >
                   <option value="">Fusionner dans…</option>
                   {categories.filter((x) => x.id !== c.id).map((x) => (
