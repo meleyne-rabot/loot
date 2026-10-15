@@ -15,7 +15,7 @@ import { SourceSelect } from "../components/SourceSelect";
 import { MalleSelect } from "../components/MalleSelect";
 import {
   Camera, Image as ImageIcon, Sparkle, ArrowClockwise,
-  Copy, Check, CheckCircle, TreasureChest, PencilSimple, GearSix, Plus,
+  Copy, Check, CheckCircle, TreasureChest, PencilSimple, GearSix, Plus, MagnifyingGlass,
 } from "@phosphor-icons/react";
 
 // ─── tokens (miroir de loot-tokens.js) ──────────────────────────────────────
@@ -151,7 +151,38 @@ async function getPriceCalibrationNote(userId, contextHint = "") {
       );
     }
 
-    // 3. Détection doublon : matching sur les mots du contexte vs noms vendus
+    // 3. Prix réels par marque (apprentissage automatique depuis l'historique)
+    const KNOWN_BRANDS = [
+      "Zara","H&M","Mango","Massimo Dutti","Sandro","Maje","Kenzo","Banana Republic",
+      "Calvin Klein","Ralph Lauren","Lacoste","Levi","Tommy Hilfiger","Adidas","Nike",
+      "Puma","Gap","Monoprix","Promod","Cache Cache","Camaieu","Pimkie","Jennyfer",
+      "Comptoir des Cotonniers","Jacadi","Petit Bateau","Catimini","Sergent Major",
+      "Playmobil","Lego","Fisher-Price","Barbie","Sylvanian","Blythe","Schleich",
+      "Burberry","Gucci","Louis Vuitton","Dior","Chanel","Hermès","Versace","Prada",
+      "Pepe Jeans","Sinequanone","Caroll","Naf Naf","Aigle","The Kooples",
+    ];
+    const brandStats = {};
+    for (const item of vendus) {
+      const nameLow = item.name.toLowerCase();
+      for (const brand of KNOWN_BRANDS) {
+        if (nameLow.includes(brand.toLowerCase())) {
+          if (!brandStats[brand]) brandStats[brand] = { sum: 0, count: 0 };
+          brandStats[brand].sum += parseFloat(item.prixVente);
+          brandStats[brand].count++;
+          break; // une seule marque par article pour éviter les doublons
+        }
+      }
+    }
+    const brandLines = Object.entries(brandStats)
+      .filter(([, v]) => v.count >= 2)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 12)
+      .map(([brand, v]) => `- ${brand} : ${(v.sum / v.count).toFixed(0)}€ moy. (${v.count} ventes)`);
+    if (brandLines.length > 0) {
+      parts.push(`Prix réels par marque (tes ventes) :\n${brandLines.join("\n")}\n→ Ces prix sont tes ancres réelles par marque — priorité sur les fourchettes génériques.`);
+    }
+
+    // 4. Détection doublon : matching sur les mots du contexte vs noms vendus
     if (contextHint && vendus.length > 0) {
       const words = contextHint.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
       const scored = vendus.map((i) => {
@@ -204,6 +235,8 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
   const [desc, setDesc] = useState("");
   const [prixListe, setPrixListe] = useState("");
   const [refine, setRefine] = useState("");
+  const [marcheResults, setMarcheResults] = useState(null); // null=idle, []loading/résultats
+  const [marcheLoading, setMarcheLoading] = useState(false);
   const [autoSavedId, setAutoSavedId] = useState(null); // pour l'affichage UI uniquement
   const autoSavedIdRef = useRef(null); // source de vérité pour save() — synchrone, pas de délai React
 
@@ -566,6 +599,61 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
           </div>
           <PencilSimple size={16} color={C.muted2} />
         </div>
+      </div>
+
+      {/* prix marché */}
+      <div style={{ ...card, marginTop: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: marcheResults ? 10 : 0 }}>
+          <div style={{ ...lbl }}>Prix marché</div>
+          <button disabled={marcheLoading} onClick={async () => {
+            setMarcheLoading(true);
+            try {
+              const res = await fetch("/api/price-search", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: titre, categorie: result?.categorie }),
+              });
+              const data = await res.json();
+              setMarcheResults(data.results || []);
+            } catch { setMarcheResults([]); }
+            finally { setMarcheLoading(false); }
+          }} style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            font: `600 12px ${F.body}`, color: marcheLoading ? C.muted3 : C.coral,
+            background: "none", border: `1.5px solid ${marcheLoading ? C.border : C.coralBorder}`,
+            borderRadius: 999, padding: "5px 12px", cursor: marcheLoading ? "default" : "pointer",
+          }}>
+            {marcheLoading
+              ? <><ArrowClockwise size={12} style={{ animation: "spin 0.8s linear infinite" }} /> Recherche…</>
+              : <><MagnifyingGlass size={12} /> Rechercher</>}
+          </button>
+        </div>
+        {marcheResults && marcheResults.length === 0 && !marcheLoading && (
+          <div style={{ font: `400 12px ${F.body}`, color: C.muted2 }}>Aucun résultat trouvé — vérifie la configuration Google Search.</div>
+        )}
+        {marcheResults && marcheResults.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {marcheResults.map((r, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8,
+                background: C.canvas, borderRadius: 10, padding: "8px 11px" }}>
+                <div style={{ flex: 1, overflow: "hidden" }}>
+                  <div style={{ font: `600 11px ${F.body}`, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.titre}</div>
+                  <div style={{ font: `400 10.5px ${F.body}`, color: C.muted2, marginTop: 1 }}>{r.source}</div>
+                </div>
+                <span style={{ font: `700 13px ${F.title}`, color: C.green, flexShrink: 0 }}>{r.prix} €</span>
+              </div>
+            ))}
+            {marcheResults.length > 0 && (() => {
+              const avg = Math.round(marcheResults.reduce((s, r) => s + r.prix, 0) / marcheResults.length);
+              const min = Math.min(...marcheResults.map(r => r.prix));
+              const max = Math.max(...marcheResults.map(r => r.prix));
+              return (
+                <div style={{ font: `600 11px ${F.body}`, color: C.muted1, textAlign: "center", paddingTop: 2 }}>
+                  Fourchette : {min}–{max} € · Moy. {avg} €
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </div>
 
       {/* ajuster & régénérer */}
