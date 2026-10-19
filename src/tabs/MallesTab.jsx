@@ -4,7 +4,7 @@ import { useToast } from "../context/ToastContext";
 import { listMalles, createMalle, updateMalle, deleteMalle, getOrCreateShareToken } from "../lib/malles";
 import { listItems } from "../lib/items";
 import { MalleDetailTab } from "./MalleDetailTab";
-import { TreasureChest, Plus, PencilSimple, X, Eye, ShareNetwork, PiggyBank } from "@phosphor-icons/react";
+import { TreasureChest, Plus, PencilSimple, X, Eye, ShareNetwork } from "@phosphor-icons/react";
 
 const PASTILLE_COLORS = [
   { bg: "#EDE9FF", color: "#5B35CC" },
@@ -191,9 +191,8 @@ export function MallesTab() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {malles.map((m, idx) => {
-          const doit         = parseFloat(m.detteMalle) || 0;
-          const totalCredits = (m.credits || []).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
-          const vendu        = items.filter((i) => i.malleId === m.id && i.statut === "vendu").reduce((s, i) => s + (parseFloat(i.prixVente) || 0), 0);
+          const doit  = parseFloat(m.detteMalle) || 0;
+          const vendu = items.filter((i) => i.malleId === m.id && i.statut === "vendu").reduce((s, i) => s + (parseFloat(i.prixVente) || 0), 0);
           const nbItems      = items.filter((i) => i.malleId === m.id).length;
           const cl      = malleColor(idx);
           const initial = (m.nom?.[0] || "?").toUpperCase();
@@ -317,20 +316,14 @@ export function MallesTab() {
                       }}
                     >{doit > 0 ? "Reverser" : "Historique"}</button>
                   </div>
-                  {/* Ligne 2 : statut + cagnotte */}
-                  <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  {/* Ligne 2 : statut */}
+                  <div style={{ marginTop: 8 }}>
                     {doit > 0
                       ? <span style={{ background: "#EDE9FF", color: "#5B35CC", borderRadius: 20, padding: "3px 10px", fontSize: 11.5, fontWeight: 700 }}>
                           À reverser {doit.toFixed(2)} €
                         </span>
                       : <span style={{ fontSize: 12, fontWeight: 700, color: "#1BA868" }}>Tu es à jour ✓</span>
                     }
-                    {totalCredits > 0 && (
-                      <span style={{ background: "#EDF7F1", color: "#1BA868", borderRadius: 20, padding: "3px 10px", fontSize: 11.5, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        <PiggyBank size={12} weight="fill" />
-                        Cagnotte {totalCredits.toFixed(2)} €
-                      </span>
-                    )}
                   </div>
                 </>
               )}

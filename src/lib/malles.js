@@ -76,21 +76,29 @@ export async function getOrCreateShareToken(id, userId) {
 }
 
 export async function addCredit(malleId, userId, { amount, motif, date }) {
-  const { data: row } = await supabase.from("malles").select("credits").eq("id", malleId).eq("user_id", userId).single();
+  const { data: row } = await supabase.from("malles").select("credits, dette_malle").eq("id", malleId).eq("user_id", userId).single();
   const existing = row?.credits || [];
-  const entry = { id: crypto.randomUUID(), amount: parseFloat(amount), motif: motif || "", date };
+  const amt = parseFloat(amount);
+  const entry = { id: crypto.randomUUID(), amount: amt, motif: motif || "", date };
   const { data, error } = await supabase
-    .from("malles").update({ credits: [...existing, entry] })
+    .from("malles").update({
+      credits: [...existing, entry],
+      dette_malle: (parseFloat(row?.dette_malle) || 0) + amt,
+    })
     .eq("id", malleId).eq("user_id", userId).select().single();
   if (error) throw error;
   return fromRow(data);
 }
 
 export async function removeCredit(malleId, userId, creditId) {
-  const { data: row } = await supabase.from("malles").select("credits").eq("id", malleId).eq("user_id", userId).single();
+  const { data: row } = await supabase.from("malles").select("credits, dette_malle").eq("id", malleId).eq("user_id", userId).single();
+  const removed = (row?.credits || []).find((c) => c.id === creditId);
   const filtered = (row?.credits || []).filter((c) => c.id !== creditId);
   const { data, error } = await supabase
-    .from("malles").update({ credits: filtered })
+    .from("malles").update({
+      credits: filtered,
+      dette_malle: Math.max(0, (parseFloat(row?.dette_malle) || 0) - (removed ? parseFloat(removed.amount) : 0)),
+    })
     .eq("id", malleId).eq("user_id", userId).select().single();
   if (error) throw error;
   return fromRow(data);
