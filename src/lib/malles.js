@@ -7,6 +7,7 @@ function fromRow(row) {
     detteMalle: row.dette_malle ?? 0,
     paypalMe: row.paypal_me || "",
     createdAt: row.created_at,
+    credits: row.credits || [],
   };
 }
 
@@ -72,6 +73,27 @@ export async function getOrCreateShareToken(id, userId) {
     .eq("user_id", userId);
   if (error) throw error;
   return token;
+}
+
+export async function addCredit(malleId, userId, { amount, motif, date }) {
+  const { data: row } = await supabase.from("malles").select("credits").eq("id", malleId).eq("user_id", userId).single();
+  const existing = row?.credits || [];
+  const entry = { id: crypto.randomUUID(), amount: parseFloat(amount), motif: motif || "", date };
+  const { data, error } = await supabase
+    .from("malles").update({ credits: [...existing, entry] })
+    .eq("id", malleId).eq("user_id", userId).select().single();
+  if (error) throw error;
+  return fromRow(data);
+}
+
+export async function removeCredit(malleId, userId, creditId) {
+  const { data: row } = await supabase.from("malles").select("credits").eq("id", malleId).eq("user_id", userId).single();
+  const filtered = (row?.credits || []).filter((c) => c.id !== creditId);
+  const { data, error } = await supabase
+    .from("malles").update({ credits: filtered })
+    .eq("id", malleId).eq("user_id", userId).select().single();
+  if (error) throw error;
+  return fromRow(data);
 }
 
 export async function createReversement(malleId, userId, montant, methode, date, note = "") {

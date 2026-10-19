@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
-import { createReversement, listReversements, updateMalle } from "../lib/malles";
-import { TreasureChest, ArrowDown, CreditCard, Coins, Buildings, Phone, Wallet, CheckCircle, Copy } from "@phosphor-icons/react";
+import { createReversement, listReversements, updateMalle, addCredit, removeCredit } from "../lib/malles";
+import { TreasureChest, ArrowDown, CreditCard, Coins, Buildings, Phone, Wallet, CheckCircle, Copy, PlusCircle, Trash, PiggyBank } from "@phosphor-icons/react";
 
 const METHODES = [
   { value: "virement",  label: "Virement",  icon: Buildings },
@@ -32,6 +32,14 @@ export function MalleDetailTab({ malle, onBack }) {
   // Édition PayPal
   const [editPaypal, setEditPaypal] = useState(false);
   const [paypalInput, setPaypalInput] = useState(malle.paypalMe || "");
+
+  // Cagnotte — crédits manuels
+  const [credits, setCredits] = useState(malle.credits || []);
+  const [showCreditForm, setShowCreditForm] = useState(false);
+  const [creditAmount, setCreditAmount] = useState("");
+  const [creditMotif, setCreditMotif] = useState("");
+  const [creditDate, setCreditDate] = useState(new Date().toISOString().slice(0, 10));
+  const [savingCredit, setSavingCredit] = useState(false);
 
   useEffect(() => {
     listReversements(malle.id, user.id).then(setReversements).catch(() => {});
@@ -86,6 +94,30 @@ export function MalleDetailTab({ malle, onBack }) {
   };
 
   const totalVerse = reversements.reduce((s, r) => s + parseFloat(r.montant), 0);
+  const totalCredits = credits.reduce((s, c) => s + parseFloat(c.amount || 0), 0);
+
+  const submitCredit = async () => {
+    const a = parseFloat(String(creditAmount).replace(",", "."));
+    if (!a || a <= 0) { showToast("Montant invalide"); return; }
+    setSavingCredit(true);
+    try {
+      const updated = await addCredit(malle.id, user.id, { amount: a, motif: creditMotif.trim(), date: creditDate });
+      setCredits(updated.credits);
+      setShowCreditForm(false);
+      setCreditAmount(""); setCreditMotif("");
+      setCreditDate(new Date().toISOString().slice(0, 10));
+      showToast("✓ Crédit ajouté");
+    } catch { showToast("Erreur lors de l'ajout"); }
+    finally { setSavingCredit(false); }
+  };
+
+  const deleteCredit = async (creditId) => {
+    try {
+      const updated = await removeCredit(malle.id, user.id, creditId);
+      setCredits(updated.credits);
+      showToast("Crédit supprimé");
+    } catch { showToast("Erreur"); }
+  };
 
   return (
     <div className="page">
@@ -242,6 +274,75 @@ export function MalleDetailTab({ malle, onBack }) {
           </div>
         </div>
       )}
+
+      {/* Cagnotte — crédits manuels */}
+      <div style={{ background: "var(--surface)", borderRadius: 18, padding: 16, marginBottom: 14, boxShadow: "var(--shadow-card)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <PiggyBank size={16} weight="fill" color="#2FA96A" />
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--muted)", textTransform: "uppercase" }}>
+              Cagnotte · {fmtMontant(totalCredits)}
+            </span>
+          </div>
+          <button onClick={() => setShowCreditForm((v) => !v)} style={{
+            display: "flex", alignItems: "center", gap: 5,
+            fontSize: 12, fontWeight: 600, color: "#2FA96A",
+            background: "#DDF1E6", border: "none", borderRadius: 10, padding: "5px 10px", cursor: "pointer",
+          }}>
+            <PlusCircle size={13} />
+            Ajouter
+          </button>
+        </div>
+
+        {showCreditForm && (
+          <div style={{ background: "#F6FBF8", borderRadius: 14, padding: 14, marginBottom: 12 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", display: "block", marginBottom: 4 }}>Montant (€)</label>
+            <input className="input" type="number" min="0" step="0.01" value={creditAmount}
+              onChange={(e) => setCreditAmount(e.target.value)}
+              style={{ marginBottom: 10, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 18 }} />
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", display: "block", marginBottom: 4 }}>Motif</label>
+            <input className="input" placeholder="Ex: argent de poche octobre, cadeau anniversaire…"
+              value={creditMotif} onChange={(e) => setCreditMotif(e.target.value)} style={{ marginBottom: 10 }} />
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", display: "block", marginBottom: 4 }}>Date</label>
+            <input className="input" type="date" value={creditDate}
+              onChange={(e) => setCreditDate(e.target.value)} style={{ marginBottom: 14 }} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-primary" onClick={submitCredit} disabled={savingCredit || !creditAmount}
+                style={{ background: "#2FA96A", boxShadow: "none" }}>
+                {savingCredit ? "Enregistrement…" : "Valider"}
+              </button>
+              <button className="btn" onClick={() => setShowCreditForm(false)}>Annuler</button>
+            </div>
+          </div>
+        )}
+
+        {credits.length === 0 && !showCreditForm && (
+          <div style={{ fontSize: 12, color: "var(--muted-2)", textAlign: "center", padding: "8px 0" }}>
+            Aucun crédit manuel pour l'instant.
+          </div>
+        )}
+
+        {credits.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {[...credits].sort((a, b) => b.date.localeCompare(a.date)).map((c) => (
+              <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10,
+                background: "#F6FBF8", borderRadius: 12, padding: "9px 12px" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>{fmtMontant(c.amount)}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--muted-2)", marginTop: 1 }}>
+                    {fmtDate(c.date)}{c.motif ? ` · ${c.motif}` : ""}
+                  </div>
+                </div>
+                <button onClick={() => deleteCredit(c.id)} style={{
+                  background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--muted-3)",
+                }}>
+                  <Trash size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Config PayPal.me */}
       <div style={{ background: "var(--surface)", borderRadius: 16, padding: "12px 14px", marginBottom: 14, boxShadow: "var(--shadow-card)" }}>
