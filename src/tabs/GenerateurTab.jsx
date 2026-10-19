@@ -235,8 +235,9 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
   const [desc, setDesc] = useState("");
   const [prixListe, setPrixListe] = useState("");
   const [refine, setRefine] = useState("");
-  const [marcheResults, setMarcheResults] = useState(null); // null=idle, []loading/résultats
+  const [marcheResults, setMarcheResults] = useState(null);
   const [marcheLoading, setMarcheLoading] = useState(false);
+  const [visionData, setVisionData] = useState(null); // résultat identification image
   const [autoSavedId, setAutoSavedId] = useState(null); // pour l'affichage UI uniquement
   const autoSavedIdRef = useRef(null); // source de vérité pour save() — synchrone, pas de délai React
 
@@ -319,16 +320,29 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
 
   async function generer(hint = "", plat = plateforme) {
     if (!images.length) return;
-    setGenerating(true); setError("");
+    setGenerating(true); setError(""); setVisionData(null);
     titleCopiedRef.current = false;
     descCopiedRef.current = false;
     setAutoSavedId(null);
     autoSavingRef.current = false;
     try {
       const ctx = [infos, hint ? `Précision : ${hint}` : ""].filter(Boolean).join("\n\n");
-      const calibNote = await getPriceCalibrationNote(user.id, ctx);
+
+      // Appel Vision API en parallèle de la calibration (uniquement première génération)
+      const visionPromise = !hint ? identifyWithVision(images[0]) : Promise.resolve(null);
+
+      const [calibNote, vision] = await Promise.all([
+        getPriceCalibrationNote(user.id, ctx),
+        visionPromise,
+      ]);
+      if (vision) setVisionData(vision);
+
+      // Enrichissement du contexte avec l'identification Vision
+      const visionCtx = vision ? buildVisionContext(vision) : "";
+      const enrichedCtx = [ctx, visionCtx].filter(Boolean).join("\n\n");
+
       const prefs = loadPrefs(user.id);
-      const r = await callAI(images, ctx, user?.user_metadata?.full_name, calibNote, prefs);
+      const r = await callAI(images, enrichedCtx, user?.user_metadata?.full_name, calibNote, prefs);
       setResult(r);
       setTitre(r.titre || "");
       setDesc(getDesc(r, plat));
@@ -338,6 +352,33 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
       window.scrollTo(0, 0);
     } catch { setError("Erreur de génération. Réessaie."); }
     setGenerating(false);
+  }
+
+  async function identifyWithVision(img) {
+    try {
+      // On envoie le data URL base64 sans le préfixe "data:image/...;base64,"
+      const base64 = img.url ? null : img.data; // img.data est déjà du base64 pur
+      if (!base64) return null;
+      const res = await fetch("/api/identify-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64 }),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch { return null; }
+  }
+
+  function buildVisionContext(vision) {
+    const parts = [];
+    if (vision.bestGuess) parts.push(`Identification visuelle : "${vision.bestGuess}"`);
+    if (vision.entities?.length) parts.push(`Entités reconnues : ${vision.entities.slice(0, 5).join(", ")}`);
+    if (vision.prices?.length) {
+      const min = Math.min(...vision.prices);
+      const max = Math.max(...vision.prices);
+      parts.push(`Prix observés sur le web pour cet article : ${min === max ? `${min}€` : `${min}–${max}€`}`);
+    }
+    return parts.length ? `[IDENTIFICATION IMAGE]\n${parts.join("\n")}` : "";
   }
 
   function changePlateforme(plat) {
@@ -582,6 +623,35 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
           style={{ width: "100%", border: "none", resize: "vertical", outline: "none",
             background: "transparent", font: `400 13px/1.6 ${F.body}`, color: "#4A4860" }} />
       </div>
+
+      {/* identification vision */}
+      {visionData && (visionData.bestGuess || visionData.entities?.length > 0) && (
+        <div style={{ ...card, background: C.violetTint, border: `1.5px solid ${C.violet}20`, marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+            <MagnifyingGlass size={13} weight="fill" color={C.violetText} />
+            <span style={{ font: `700 11px ${F.body}`, color: C.violetText, textTransform: "uppercase", letterSpacing: ".05em" }}>Identification image</span>
+          </div>
+          {visionData.bestGuess && (
+            <div style={{ font: `600 13px ${F.body}`, color: C.ink, marginBottom: 4 }}>
+              {visionData.bestGuess}
+            </div>
+          )}
+          {visionData.entities?.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {visionData.entities.slice(0, 6).map((e, i) => (
+                <span key={i} style={{ font: `500 11px ${F.body}`, color: C.violetText,
+                  background: "#fff", border: `1px solid ${C.violet}40`,
+                  padding: "3px 8px", borderRadius: 999 }}>{e}</span>
+              ))}
+            </div>
+          )}
+          {visionData.prices?.length > 0 && (
+            <div style={{ font: `600 11px ${F.body}`, color: C.muted1, marginTop: 6 }}>
+              Prix web : {Math.min(...visionData.prices)}–{Math.max(...visionData.prices)} €
+            </div>
+          )}
+        </div>
+      )}
 
       {/* prix conseillé */}
       <div style={card}>
