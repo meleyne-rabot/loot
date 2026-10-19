@@ -182,19 +182,40 @@ async function getPriceCalibrationNote(userId, contextHint = "") {
       parts.push(`Prix réels par marque (tes ventes) :\n${brandLines.join("\n")}\n→ Ces prix sont tes ancres réelles par marque — priorité sur les fourchettes génériques.`);
     }
 
-    // 4. Détection doublon : matching sur les mots du contexte vs noms vendus
-    if (contextHint && vendus.length > 0) {
+    // 4. Articles actuellement en ligne (ancres de prix pour éviter les incohérences entre articles similaires)
+    const enLigne = items
+      .filter((i) => i.statut === "en-vente" && parseFloat(i.prixAffiche) > 0 && i.name)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 15);
+    if (enLigne.length > 0) {
+      const lines = enLigne.map((i) => {
+        const nom = i.name.length > 50 ? i.name.slice(0, 47) + "…" : i.name;
+        return `- ${nom} → listé ${parseFloat(i.prixAffiche).toFixed(0)}€`;
+      });
+      parts.push(`Articles actuellement en ligne (cohérence de prix — respecte ces valeurs pour des articles similaires) :\n${lines.join("\n")}`);
+    }
+
+    // 5. Détection doublon : matching sur les mots du contexte vs noms vendus ET articles en ligne
+    if (contextHint) {
       const words = contextHint.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
-      const scored = vendus.map((i) => {
+      const candidates = [
+        ...vendus.map((i) => ({ i, source: "vendu" })),
+        ...enLigne.map((i) => ({ i, source: "en-vente" })),
+      ];
+      const scored = candidates.map(({ i, source }) => {
         const nameWords = i.name.toLowerCase().split(/\W+/);
         const overlap = words.filter((w) => nameWords.some((nw) => nw.includes(w) || w.includes(nw))).length;
-        return { i, score: overlap };
-      }).filter((x) => x.score >= 2).sort((a, b) => b.score - a.score).slice(0, 2);
+        return { i, score: overlap, source };
+      }).filter((x) => x.score >= 2).sort((a, b) => b.score - a.score).slice(0, 3);
       if (scored.length > 0) {
-        const matchLines = scored.map(({ i }) =>
-          `"${i.name}" vendu ${parseFloat(i.prixVente).toFixed(0)}€${parseFloat(i.prixAffiche) > 0 ? ` (listé ${parseFloat(i.prixAffiche).toFixed(0)}€)` : ""}`
-        );
-        parts.push(`⚠️ Article similaire déjà vendu par cette utilisatrice : ${matchLines.join(" / ")}. ANCRE ton prix_recommande sur ces valeurs réelles — c'est son vrai marché.`);
+        const matchLines = scored.map(({ i, source }) => {
+          if (source === "vendu") {
+            return `"${i.name}" vendu ${parseFloat(i.prixVente).toFixed(0)}€${parseFloat(i.prixAffiche) > 0 ? ` (listé ${parseFloat(i.prixAffiche).toFixed(0)}€)` : ""}`;
+          } else {
+            return `"${i.name}" actuellement en ligne à ${parseFloat(i.prixAffiche).toFixed(0)}€`;
+          }
+        });
+        parts.push(`⚠️ Article similaire déjà dans l'inventaire de cette utilisatrice : ${matchLines.join(" / ")}. ALIGNE EXACTEMENT ton prix_recommande sur ces valeurs — la cohérence de la boutique prime.`);
       }
     }
 

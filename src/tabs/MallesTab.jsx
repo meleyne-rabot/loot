@@ -4,7 +4,7 @@ import { useToast } from "../context/ToastContext";
 import { listMalles, createMalle, updateMalle, deleteMalle, getOrCreateShareToken } from "../lib/malles";
 import { listItems } from "../lib/items";
 import { MalleDetailTab } from "./MalleDetailTab";
-import { TreasureChest, Plus, PencilSimple, X, Eye, ShareNetwork } from "@phosphor-icons/react";
+import { TreasureChest, Plus, PencilSimple, X, Eye, ShareNetwork, PiggyBank } from "@phosphor-icons/react";
 
 const PASTILLE_COLORS = [
   { bg: "#EDE9FF", color: "#5B35CC" },
@@ -191,9 +191,10 @@ export function MallesTab() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {malles.map((m, idx) => {
-          const doit    = parseFloat(m.detteMalle) || 0;
-          const vendu   = items.filter((i) => i.malleId === m.id && i.statut === "vendu").reduce((s, i) => s + (parseFloat(i.prixVente) || 0), 0);
-          const nbItems = items.filter((i) => i.malleId === m.id).length;
+          const doit         = parseFloat(m.detteMalle) || 0;
+          const totalCredits = (m.credits || []).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+          const vendu        = items.filter((i) => i.malleId === m.id && i.statut === "vendu").reduce((s, i) => s + (parseFloat(i.prixVente) || 0), 0);
+          const nbItems      = items.filter((i) => i.malleId === m.id).length;
           const cl      = malleColor(idx);
           const initial = (m.nom?.[0] || "?").toUpperCase();
           const isEditing = editingId === m.id;
@@ -204,22 +205,30 @@ export function MallesTab() {
               padding: isEditing ? "15px" : "15px 15px 12px",
               boxShadow: "var(--shadow-card)",
             }}>
-              {/* Header malle */}
+              {/* Header malle — cliquable pour accéder au détail */}
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: isEditing ? 12 : 10 }}>
-                <span style={{
-                  width: 44, height: 44, borderRadius: 14, background: cl.bg, flexShrink: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800,
-                  fontSize: 18, color: cl.color,
-                }}>{initial}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 15, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {m.nom}
+                <button
+                  onClick={() => !isEditing && setViewing(m)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0,
+                    background: "none", border: "none", padding: 0, cursor: isEditing ? "default" : "pointer", textAlign: "left",
+                  }}
+                >
+                  <span style={{
+                    width: 44, height: 44, borderRadius: 14, background: cl.bg, flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800,
+                    fontSize: 18, color: cl.color,
+                  }}>{initial}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, fontSize: 15, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {m.nom}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--muted-2)" }}>
+                      Commission {m.commissionPct || 0}% · {nbItems} article{nbItems !== 1 ? "s" : ""}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--muted-2)" }}>
-                    Commission {m.commissionPct || 0}% · {nbItems} article{nbItems !== 1 ? "s" : ""}
-                  </div>
-                </div>
+                </button>
                 {/* Actions header */}
                 <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                   <button
@@ -308,14 +317,20 @@ export function MallesTab() {
                       }}
                     >{doit > 0 ? "Reverser" : "Historique"}</button>
                   </div>
-                  {/* Ligne 2 : statut — toujours en bas, ne bouge pas les boutons */}
-                  <div style={{ marginTop: 8 }}>
+                  {/* Ligne 2 : statut + cagnotte */}
+                  <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     {doit > 0
                       ? <span style={{ background: "#EDE9FF", color: "#5B35CC", borderRadius: 20, padding: "3px 10px", fontSize: 11.5, fontWeight: 700 }}>
                           À reverser {doit.toFixed(2)} €
                         </span>
                       : <span style={{ fontSize: 12, fontWeight: 700, color: "#1BA868" }}>Tu es à jour ✓</span>
                     }
+                    {totalCredits > 0 && (
+                      <span style={{ background: "#EDF7F1", color: "#1BA868", borderRadius: 20, padding: "3px 10px", fontSize: 11.5, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <PiggyBank size={12} weight="fill" />
+                        Cagnotte {totalCredits.toFixed(2)} €
+                      </span>
+                    )}
                   </div>
                 </>
               )}

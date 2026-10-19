@@ -115,7 +115,7 @@ export async function runGenerate({ images, context, mode, currentResult, chatHi
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 1000,
-        temperature: 0.2,
+        temperature: 0,
         system,
         messages,
       }),
