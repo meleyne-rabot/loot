@@ -467,10 +467,12 @@ function ActivityChart({ items }) {
                   : <div style={{ width: "100%", height: 4, borderRadius: 4, background: "#EDEBF3" }} />}
                 {/* valeur */}
                 {s.gains > 0
-                  ? <span style={{ fontFamily: F.title, fontWeight: 800, fontSize: best ? 11 : 10, color: VIOLET_DK, whiteSpace: "nowrap" }}>{s.gains.toFixed(0)}€</span>
+                  ? <span style={{ fontFamily: F.title, fontWeight: 800, fontSize: best ? 11 : 10, color: VIOLET_DK, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", display: "block", textAlign: "center" }}>
+                      {s.gains >= 1000 && !best ? `${(s.gains / 1000).toFixed(1)}k€` : `${s.gains.toFixed(0)}€`}
+                    </span>
                   : <span style={{ fontFamily: F.body, fontWeight: 600, fontSize: 10, color: "#B7B4C4" }}>–</span>}
                 {/* axe */}
-                <span style={{ fontFamily: F.body, fontWeight: best ? 700 : 600, fontSize: 9, color: best ? C.ink : C.muted2, visibility: showLabel ? "visible" : "hidden", whiteSpace: "nowrap" }}>
+                <span style={{ fontFamily: F.body, fontWeight: best ? 700 : 600, fontSize: 9, color: best ? C.ink : C.muted2, visibility: showLabel ? "visible" : "hidden", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%", display: "block", textAlign: "center" }}>
                   {getAxisLabel(s)}
                 </span>
               </div>
@@ -598,7 +600,6 @@ function pearson(xs, ys) {
 }
 
 function computeCorrelation(items) {
-  // Construit un dictionnaire jour → { ajouts, ventes }
   const byDay = {};
   for (const it of items) {
     if (!it.createdAt) continue;
@@ -615,38 +616,85 @@ function computeCorrelation(items) {
   }
 
   const days = Object.keys(byDay).sort();
-  if (days.length < 14) return null; // pas assez de données
+  if (days.length < 14) return null;
 
   const ajouts = days.map(d => byDay[d].ajouts);
   const ventes = days.map(d => byDay[d].ventes);
+  const n = days.length;
 
-  // Corrélation à différents lags (0 à 4 jours)
-  const lags = [0, 1, 2, 3, 4];
-  const cors = lags.map(k => {
-    const xs = ajouts.slice(0, days.length - k);
-    const ys = ventes.slice(k);
-    return { lag: k, r: pearson(xs, ys) };
-  });
+  // Corrélations globales court terme (J, J+1, J+2) — volume et binaire
+  const binary = ajouts.map(a => a > 0 ? 1 : 0);
+  const rJ_vol   = pearson(ajouts, ventes);
+  const rJ1_vol  = pearson(ajouts.slice(0, n - 1), ventes.slice(1));
+  const rJ2_vol  = pearson(ajouts.slice(0, n - 2), ventes.slice(2));
+  const rJ_bin   = pearson(binary, ventes);
+  const rJ1_bin  = pearson(binary.slice(0, n - 1), ventes.slice(1));
+  const rJ2_bin  = pearson(binary.slice(0, n - 2), ventes.slice(2));
 
-  const best = cors.reduce((b, c) => c.r > b.r ? c : b, cors[0]);
+  // Moyennes comparées : jours avec vs sans ajouts → ventes J, J+1, J+2
+  const withIdx    = days.map((_, i) => i).filter(i => ajouts[i] > 0 && i < n - 2);
+  const withoutIdx = days.map((_, i) => i).filter(i => ajouts[i] === 0 && i < n - 2);
+  const avgVentes = (indices, lag) =>
+    indices.length > 0
+      ? indices.reduce((s, i) => s + (ventes[i + lag] || 0), 0) / indices.length
+      : 0;
+  const withJ  = avgVentes(withIdx, 0);
+  const withJ1 = avgVentes(withIdx, 1);
+  const withJ2 = avgVentes(withIdx, 2);
+  const woJ    = avgVentes(withoutIdx, 0);
+  const woJ1   = avgVentes(withoutIdx, 1);
+  const woJ2   = avgVentes(withoutIdx, 2);
 
-  // Ratio pratique : à lag optimal, combien d'ajouts par vente ?
-  const totalAjouts = ajouts.slice(0, days.length - best.lag).reduce((s, v) => s + v, 0);
-  const totalVentes = ventes.slice(best.lag).reduce((s, v) => s + v, 0);
-  const ratio = totalVentes > 0 ? Math.round((totalAjouts / totalVentes) * 10) / 10 : null;
+  // Volume : sur les jours avec ajouts, corrélation nombre d'ajouts vs ventes J+1
+  const withAjoutsX = withIdx.map(i => ajouts[i]);
+  const withAjoutsY1 = withIdx.map(i => ventes[i + 1] || 0);
+  const rVolParmi = pearson(withAjoutsX, withAjoutsY1); // "est-ce que publier + = vendre + ?"
 
-  return { cors, best, ratio, days: days.length };
+  return {
+    rJ_vol: Math.round(rJ_vol * 100), rJ1_vol: Math.round(rJ1_vol * 100), rJ2_vol: Math.round(rJ2_vol * 100),
+    rJ_bin: Math.round(rJ_bin * 100), rJ1_bin: Math.round(rJ1_bin * 100), rJ2_bin: Math.round(rJ2_bin * 100),
+    rVolParmi: Math.round(rVolParmi * 100),
+    withJ, withJ1, withJ2, woJ, woJ1, woJ2,
+    withDays: withIdx.length, withoutDays: withoutIdx.length,
+    days: n,
+  };
+}
+
+function corrColor(r) {
+  if (r >= 60) return GREEN_DK;
+  if (r >= 35) return AMBER_DK;
+  return C.muted2;
+}
+
+function CorrBar({ label, r, color, maxBar }) {
+  const w = Math.round((Math.max(0, r) / maxBar) * 100);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span style={{ fontSize: 10, color: C.muted2, width: 72, flexShrink: 0 }}>{label}</span>
+      <div style={{ flex: 1, height: 8, background: C.divider, borderRadius: 4, overflow: "hidden" }}>
+        <div style={{ width: `${w}%`, height: "100%", background: color, borderRadius: 4 }} />
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 700, color: corrColor(r), width: 32, textAlign: "right", flexShrink: 0 }}>{r}%</span>
+    </div>
+  );
 }
 
 function CorrelationCard({ items }) {
   const data = useMemo(() => computeCorrelation(items), [items]);
   if (!data) return null;
 
-  const { best, cors, ratio } = data;
-  const pct = Math.round(best.r * 100);
-  const lagLabel = best.lag === 0 ? "le même jour" : best.lag === 1 ? "le lendemain" : `J+${best.lag}`;
-  const strength = pct >= 60 ? "forte" : pct >= 35 ? "modérée" : "faible";
-  const strengthColor = pct >= 60 ? GREEN_DK : pct >= 35 ? AMBER_DK : C.muted2;
+  const { rJ_vol, rJ1_vol, rJ2_vol, rJ_bin, rJ1_bin, rJ2_bin, rVolParmi,
+          withJ, withJ1, withJ2, woJ, woJ1, woJ2, withDays, withoutDays } = data;
+
+  const volumeMatters = rJ1_vol - rJ1_bin;
+  const volumeLabel = volumeMatters >= 10 ? "Publier plus = vendre plus"
+    : volumeMatters <= -10 ? "La quantité ne change rien"
+    : "Volume peu différenciant";
+
+  const maxVol = Math.max(10, Math.abs(rJ_vol), Math.abs(rJ1_vol), Math.abs(rJ2_vol));
+  const maxBin = Math.max(10, Math.abs(rJ_bin), Math.abs(rJ1_bin), Math.abs(rJ2_bin));
+
+  const fmt = (v) => v.toFixed(1);
 
   return (
     <div className="section-card" style={{ marginBottom: 14 }}>
@@ -655,52 +703,72 @@ function CorrelationCard({ items }) {
         <span className="psection-label">Corrélation ajouts → ventes</span>
       </div>
 
-      {/* Stat principale */}
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 14 }}>
-        <div>
-          <div style={{ fontFamily: F.title, fontWeight: 800, fontSize: 32, color: strengthColor, letterSpacing: "-.02em", lineHeight: 1 }}>
-            {pct}%
-          </div>
-          <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 12, color: C.muted2, marginTop: 3 }}>
-            corrélation {strength}
-          </div>
+      {/* Bloc 1 : corrélation volume (nb articles publiés) */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: C.muted2, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 7 }}>
+          Nb d'ajouts → ventes (corrélation volume)
         </div>
-        <div style={{ marginBottom: 4 }}>
-          <div style={{ fontFamily: F.body, fontWeight: 600, fontSize: 13, color: C.ink }}>
-            Pic de ventes <b style={{ color: strengthColor }}>{lagLabel}</b>
-          </div>
-          {ratio !== null && (
-            <div style={{ fontFamily: F.body, fontWeight: 500, fontSize: 12, color: C.muted2, marginTop: 2 }}>
-              ~{ratio} publication{ratio > 1 ? "s" : ""} → 1 vente
-            </div>
-          )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <CorrBar label="Même jour (J)" r={rJ_vol}  color={VIOLET} maxBar={maxVol} />
+          <CorrBar label="Lendemain (J+1)" r={rJ1_vol} color={VIOLET} maxBar={maxVol} />
+          <CorrBar label="Surlendemain (J+2)" r={rJ2_vol} color={VIOLET_DK} maxBar={maxVol} />
         </div>
       </div>
 
-      {/* Mini-barres des corrélations par lag */}
-      <div style={{ display: "flex", gap: 6, alignItems: "flex-end", marginBottom: 10 }}>
-        {cors.map(({ lag, r }) => {
-          const pctLag = Math.round(r * 100);
-          const isBest = lag === best.lag;
-          const h = Math.max(6, Math.round(Math.max(0, r) * 48));
-          return (
-            <div key={lag} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-              <span style={{ fontFamily: F.title, fontWeight: 800, fontSize: 10, color: isBest ? strengthColor : C.muted3 }}>
-                {pctLag}%
-              </span>
-              <div style={{ width: "100%", height: h, borderRadius: 4,
-                background: isBest ? `linear-gradient(180deg,${isBest && pct >= 60 ? "#5DD49A" : isBest ? "#F5B96A" : "#D4D2E0"},${isBest ? strengthColor : C.muted3})` : C.divider }} />
-              <span style={{ fontFamily: F.body, fontSize: 9, color: isBest ? C.ink : C.muted3, fontWeight: isBest ? 700 : 500 }}>
-                {lag === 0 ? "J" : `J+${lag}`}
-              </span>
-            </div>
-          );
-        })}
+      {/* Bloc 2 : corrélation binaire (a-t-on publié ce jour ?) */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: C.muted2, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 7 }}>
+          A publié ce jour ? (oui/non) → ventes
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <CorrBar label="Même jour (J)" r={rJ_bin}  color={GREEN} maxBar={maxBin} />
+          <CorrBar label="Lendemain (J+1)" r={rJ1_bin} color={GREEN} maxBar={maxBin} />
+          <CorrBar label="Surlendemain (J+2)" r={rJ2_bin} color={GREEN_DK} maxBar={maxBin} />
+        </div>
       </div>
 
-      <p style={{ fontSize: 11, color: C.muted2, lineHeight: 1.5, margin: 0 }}>
-        Calculé sur {data.days} jours d'historique. Publier déclenche des ventes — pas forcément des articles publiés.
-      </p>
+      {/* Bloc 3 : comparaison concrète avec/sans ajouts */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: C.muted2, letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 7 }}>
+          Ventes moyennes : jours avec vs sans ajouts
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left", fontWeight: 700, color: C.muted2, paddingBottom: 4 }} />
+              {["J", "J+1", "J+2"].map(l => (
+                <th key={l} style={{ textAlign: "center", fontWeight: 700, color: C.muted2, paddingBottom: 4 }}>{l}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ fontWeight: 600, color: GREEN_DK, paddingRight: 6 }}>
+                Avec <span style={{ color: C.muted3, fontWeight: 400 }}>({withDays}j)</span>
+              </td>
+              {[withJ, withJ1, withJ2].map((v, i) => (
+                <td key={i} style={{ textAlign: "center", fontFamily: F.title, fontWeight: 800, fontSize: 15, color: GREEN_DK }}>{fmt(v)}</td>
+              ))}
+            </tr>
+            <tr>
+              <td style={{ fontWeight: 600, color: C.muted2, paddingRight: 6 }}>
+                Sans <span style={{ color: C.muted3, fontWeight: 400 }}>({withoutDays}j)</span>
+              </td>
+              {[woJ, woJ1, woJ2].map((v, i) => (
+                <td key={i} style={{ textAlign: "center", fontFamily: F.title, fontWeight: 800, fontSize: 15, color: C.muted2 }}>{fmt(v)}</td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Insight volume vs binaire */}
+      <div style={{ background: "#F4F3FF", borderRadius: 10, padding: "8px 11px" }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: VIOLET_DK }}>{volumeLabel}</div>
+        <div style={{ fontSize: 11, color: C.muted2, marginTop: 2 }}>
+          Parmi les jours avec ajouts, r(nb articles, ventes J+1) = {rVolParmi}% · Calculé sur {data.days} jours.
+        </div>
+      </div>
     </div>
   );
 }
