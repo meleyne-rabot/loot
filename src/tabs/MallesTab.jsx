@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { listMalles, createMalle, updateMalle, deleteMalle, getOrCreateShareToken } from "../lib/malles";
-import { listItems } from "../lib/items";
 import { MalleDetailTab } from "./MalleDetailTab";
 import { TreasureChest, Plus, PencilSimple, X, Eye, ShareNetwork } from "@phosphor-icons/react";
 
@@ -16,12 +15,7 @@ const PASTILLE_COLORS = [
 function malleColor(idx) { return PASTILLE_COLORS[idx % PASTILLE_COLORS.length]; }
 
 // Vue articles pour une malle (tous statuts)
-function MalleArticlesView({ malle, onBack }) {
-  const { user } = useAuth();
-  const [malleItems, setMalleItems] = useState([]);
-  useEffect(() => {
-    listItems(user.id).then((all) => setMalleItems(all.filter((i) => i.malleId === malle.id))).catch(() => {});
-  }, [malle.id]);
+function MalleArticlesView({ malle, malleItems, onBack }) {
   const cl = malleColor(0);
   const sLbl = { vendu: "Vendu", "en-vente": "En vente", "en-attente": "En attente" };
   const sCls = { vendu: "#1BA868", "en-vente": "#F03C64", "en-attente": "#8A879B" };
@@ -82,11 +76,10 @@ function MalleArticlesView({ malle, onBack }) {
   );
 }
 
-export function MallesTab() {
+export function MallesTab({ items = [], onItemsChanged }) {
   const { user }        = useAuth();
   const { showToast }   = useToast();
   const [malles, setMalles] = useState([]);
-  const [items,  setItems]  = useState([]);
   const [viewing,         setViewing]         = useState(null); // malle → MalleDetailTab (reversements)
   const [viewingArticles, setViewingArticles] = useState(null); // malle → MalleArticlesView
   const [editingId, setEditingId] = useState(null); // malle.id en cours d'édition inline
@@ -98,12 +91,11 @@ export function MallesTab() {
 
   const load = () => {
     listMalles(user.id).then(setMalles).catch(() => {});
-    listItems(user.id).then(setItems).catch(() => {});
   };
   useEffect(() => { load(); }, [user.id]);
 
   if (viewing)         return <MalleDetailTab malle={viewing} onBack={() => { setViewing(null); load(); }} />;
-  if (viewingArticles) return <MalleArticlesView malle={viewingArticles} onBack={() => setViewingArticles(null)} />;
+  if (viewingArticles) return <MalleArticlesView malle={viewingArticles} malleItems={items.filter((i) => i.malleId === viewingArticles.id)} onBack={() => setViewingArticles(null)} />;
 
   const totalAReverser = malles.reduce((s, m) => s + (parseFloat(m.detteMalle) || 0), 0);
 

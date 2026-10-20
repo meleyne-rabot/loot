@@ -4,7 +4,6 @@
 import { useEffect, useRef, useState } from "react";
 import { callAI } from "../lib/ai";
 import { compressImage, compressForAI } from "../lib/image";
-import { listItems } from "../lib/items";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { listCategories, matchCategoryByName, findOrCreateVintage } from "../lib/categories";
@@ -78,9 +77,8 @@ const chip = () => ({
 });
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-async function getPriceCalibrationNote(userId, contextHint = "") {
+function getPriceCalibrationNote(items, contextHint = "") {
   try {
-    const items = await listItems(userId);
     const parts = [];
 
     // 1. Ajustement par catégorie (reco IA → prix réellement listé)
@@ -235,7 +233,7 @@ function getDesc(result, platform) {
 }
 
 // ─── composant principal ─────────────────────────────────────────────────────
-export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOpenAnnonceSettings }) {
+export function GenerateurTab({ items = [], onSave, onUpdate, onPhaseChange, goBackRef, onOpenAnnonceSettings }) {
   const { user } = useAuth();
   const { showToast } = useToast();
 
@@ -353,7 +351,7 @@ export function GenerateurTab({ onSave, onUpdate, onPhaseChange, goBackRef, onOp
       const visionPromise = !hint ? identifyWithVision(images[0]) : Promise.resolve(null);
 
       const [calibNote, vision] = await Promise.all([
-        getPriceCalibrationNote(user.id, ctx),
+        Promise.resolve(getPriceCalibrationNote(items, ctx)),
         visionPromise,
       ]);
       if (vision) setVisionData(vision);

@@ -220,6 +220,7 @@ function ProfileDrawer({ user, onClose, onOpenAbout, onOpenFaq, onOpenOnboarding
 }
 
 const ITEMS_CACHE_KEY = "loot:items-cache";
+const ITEMS_CACHE_TS_KEY = "loot:items-cache-ts";
 
 export default function App() {
   const { user } = useAuth();
@@ -238,14 +239,26 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
+    let skipFetch = false;
     try {
       const cached = localStorage.getItem(ITEMS_CACHE_KEY + ":" + user.id);
-      if (cached) { setItems(JSON.parse(cached)); setReady(true); }
+      const ts = parseInt(localStorage.getItem(ITEMS_CACHE_TS_KEY + ":" + user.id) || "0", 10);
+      if (cached) {
+        setItems(JSON.parse(cached)); setReady(true);
+        // En dev, Vite HMR remonte l'arbre à chaque sauvegarde → évite de re-télécharger
+        // 22 Mo à chaque hot-reload si le cache a moins de 90 secondes.
+        if (Date.now() - ts < 90_000) skipFetch = true;
+      }
     } catch { /* cache corrompu */ }
-    listItems(user.id).then((data) => {
-      setItems(data); setReady(true);
-      try { localStorage.setItem(ITEMS_CACHE_KEY + ":" + user.id, JSON.stringify(data)); } catch { /* quota */ }
-    });
+    if (!skipFetch) {
+      listItems(user.id).then((data) => {
+        setItems(data); setReady(true);
+        try {
+          localStorage.setItem(ITEMS_CACHE_KEY + ":" + user.id, JSON.stringify(data));
+          localStorage.setItem(ITEMS_CACHE_TS_KEY + ":" + user.id, String(Date.now()));
+        } catch { /* quota */ }
+      });
+    }
   }, [user]);
 
   const add = async (item, sourceType, { stayOnPage } = {}) => {
@@ -258,7 +271,10 @@ export default function App() {
     const updated = await updateItem(u, user.id, sourceType);
     setItems((prev) => {
       const next = prev.map((i) => (i.id === updated.id ? updated : i));
-      try { localStorage.setItem(ITEMS_CACHE_KEY + ":" + user.id, JSON.stringify(next)); } catch { /* quota */ }
+      try {
+          localStorage.setItem(ITEMS_CACHE_KEY + ":" + user.id, JSON.stringify(next));
+          localStorage.setItem(ITEMS_CACHE_TS_KEY + ":" + user.id, String(Date.now()));
+        } catch { /* quota */ }
       return next;
     });
   };
@@ -319,10 +335,10 @@ export default function App() {
         <p className="page-subtitle">{current?.subtitle}</p>
       </div>
 
-      {tab === "generer"    && <GenerateurTab onSave={add} onUpdate={upd} onPhaseChange={setGenPhase} goBackRef={genGoBackRef} />}
+      {tab === "generer"    && <GenerateurTab items={items} onSave={add} onUpdate={upd} onPhaseChange={setGenPhase} goBackRef={genGoBackRef} />}
       {tab === "inventaire" && <InventaireTab items={items} onUpdate={upd} onDelete={del} onItemPatched={itemPatched} onGoToGenerer={() => setTab("generer")} onOpenDetail={setDetailItem} />}
       {tab === "stats"      && <StatsTab items={items} />}
-      {tab === "malles"     && <MallesTab />}
+      {tab === "malles"     && <MallesTab items={items} onItemsChanged={() => listItems(user.id).then((data) => { setItems(data); try { localStorage.setItem(ITEMS_CACHE_KEY + ":" + user.id, JSON.stringify(data)); localStorage.setItem(ITEMS_CACHE_TS_KEY + ":" + user.id, String(Date.now())); } catch {} })} />}
       {tab === "settings"   && <SettingsTab />}
 
 
